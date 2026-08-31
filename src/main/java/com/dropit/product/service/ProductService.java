@@ -37,6 +37,6 @@ public class ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        return ProductResponse.from(savedProduct);
+        return new ProductResponse(savedProduct);
     }
 }

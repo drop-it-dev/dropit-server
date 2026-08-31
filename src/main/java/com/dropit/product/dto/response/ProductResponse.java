@@ -9,49 +9,25 @@ import java.time.LocalDateTime;
 @Getter
 public class ProductResponse {
 
-    private final Long id;
-    private final Long sellerId;
-    private final String sellerName;
-    private final String name;
-    private final BigDecimal price;
-    private final String description;
-    private final String imageUrl;
-    private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private Long id;
+    private Long sellerId;
+    private String sellerName;
+    private String name;
+    private BigDecimal price;
+    private String description;
+    private String imageUrl;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
-    public ProductResponse(
-            Long id,
-            Long sellerId,
-            String sellerName,
-            String name,
-            BigDecimal price,
-            String description,
-            String imageUrl,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
-    ) {
-        this.id = id;
-        this.sellerId = sellerId;
-        this.sellerName = sellerName;
-        this.name = name;
-        this.price = price;
-        this.description = description;
-        this.imageUrl = imageUrl;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
-
-    public static ProductResponse from(Product product) {
-        return new ProductResponse(
-                product.getId(),
-                product.getSeller().getId(),
-                product.getSeller().getUsername(),
-                product.getName(),
-                product.getPrice(),
-                product.getDescription(),
-                product.getImageUrl(),
-                product.getCreatedAt(),
-                product.getUpdatedAt()
-        );
+    public ProductResponse(Product product) {
+        this.id = product.getId();
+        this.sellerId = product.getSeller().getId();
+        this.sellerName = product.getSeller().getUsername();
+        this.name = product.getName();
+        this.price = product.getPrice();
+        this.description = product.getDescription();
+        this.imageUrl = product.getImageUrl();
+        this.createdAt = product.getCreatedAt();
+        this.updatedAt = product.getUpdatedAt();
     }
 }
