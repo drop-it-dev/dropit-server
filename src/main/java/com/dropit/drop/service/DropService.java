@@ -64,11 +64,25 @@ public class DropService {
         if (!Objects.equals(drop.getProduct().getSeller().getId(), sellerId)) {
             throw new ServiceException(DropErrorCode.DROP_OWNER_REQUIRED);
         }
-        
+
         drop.ensureEditable(LocalDateTime.now());
 
         drop.update(request.initialQuantity(), request.discountRate(), request.purchaseLimit(), request.openAt(), request.closeAt());
 
         return DropResponse.from(drop);
+    }
+
+    @Transactional
+    public void delete(Long sellerId, Long dropId) {
+        Drop drop = dropRepository.findById(dropId)
+                .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
+
+        if (!Objects.equals(drop.getProduct().getSeller().getId(), sellerId)) {
+            throw new ServiceException(DropErrorCode.DROP_OWNER_REQUIRED);
+        }
+
+        drop.ensureEditable(LocalDateTime.now());
+
+        dropRepository.delete(drop);
     }
 }
