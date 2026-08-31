@@ -2,7 +2,15 @@ package com.dropit.product.entity;
 
 import com.dropit.global.entity.BaseEntity;
 import com.dropit.user.entity.User;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +31,7 @@ public class Product extends BaseEntity {
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String name;
 
     @Column(nullable = false, precision = 15, scale = 2)
@@ -40,6 +48,16 @@ public class Product extends BaseEntity {
         this.name = name;
         this.price = price;
         this.description = description;
+        this.imageUrl = imageUrl;
+    }
+
+    public void updateInfo(String name, BigDecimal price, String description) {
+        this.name = name;
+        this.price = price;
+        this.description = description;
+    }
+
+    public void changeImage(String imageUrl) {
         this.imageUrl = imageUrl;
     }
 }
