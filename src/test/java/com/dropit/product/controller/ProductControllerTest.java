@@ -1,9 +1,12 @@
 package com.dropit.product.controller;
 
+import com.dropit.global.exception.GlobalExceptionHandler;
+import com.dropit.global.exception.ServiceException;
 import com.dropit.product.dto.request.ProductCreateRequest;
 import com.dropit.product.dto.request.ProductUpdateRequest;
 import com.dropit.product.dto.response.ProductResponse;
 import com.dropit.product.entity.Product;
+import com.dropit.product.exception.ProductErrorCode;
 import com.dropit.product.service.ProductService;
 import com.dropit.user.entity.User;
 import com.dropit.user.entity.UserRole;
@@ -44,7 +47,10 @@ class ProductControllerTest {
     void setUp() {
         productService = mock(ProductService.class);
         ProductController productController = new ProductController(productService);
-        mockMvc = MockMvcBuilders.standaloneSetup(productController).build();
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(productController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
@@ -140,6 +146,60 @@ class ProductControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(productService);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 판매자로 상품을 등록하면 404 오류 응답을 반환한다")
+    void rejectMissingSeller() throws Exception {
+        when(productService.create(eq(999L), any(ProductCreateRequest.class)))
+                .thenThrow(new ServiceException(ProductErrorCode.SELLER_NOT_FOUND));
+
+        mockMvc.perform(post("/products")
+                        .param("sellerId", "999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Product",
+                                  "price": 10000.00,
+                                  "description": "Description"
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("SELLER_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("존재하지 않는 판매자입니다."));
+    }
+
+    @Test
+    @DisplayName("판매자 역할이 아니면 상품 등록 시 403 오류 응답을 반환한다")
+    void rejectNonSeller() throws Exception {
+        when(productService.create(eq(1L), any(ProductCreateRequest.class)))
+                .thenThrow(new ServiceException(ProductErrorCode.SELLER_ROLE_REQUIRED));
+
+        mockMvc.perform(post("/products")
+                        .param("sellerId", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Product",
+                                  "price": 10000.00,
+                                  "description": "Description"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("SELLER_ROLE_REQUIRED"))
+                .andExpect(jsonPath("$.message").value("판매자만 상품을 등록할 수 있습니다."));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 상품을 조회하면 404 오류 응답을 반환한다")
+    void rejectMissingProduct() throws Exception {
+        when(productService.getProduct(999L))
+                .thenThrow(new ServiceException(ProductErrorCode.PRODUCT_NOT_FOUND));
+
+        mockMvc.perform(get("/products/{productId}", 999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("PRODUCT_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("존재하지 않는 상품입니다."));
     }
 
     @Test
@@ -245,6 +305,27 @@ class ProductControllerTest {
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(productService);
+    }
+
+    @Test
+    @DisplayName("상품 소유자가 아니면 수정 시 403 오류 응답을 반환한다")
+    void rejectUpdatingAnotherSellersProduct() throws Exception {
+        when(productService.update(eq(2L), eq(100L), any(ProductUpdateRequest.class)))
+                .thenThrow(new ServiceException(ProductErrorCode.PRODUCT_OWNER_REQUIRED));
+
+        mockMvc.perform(put("/products/{productId}", 100L)
+                        .param("sellerId", "2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Updated Product",
+                                  "price": 49000.00,
+                                  "description": "Updated description"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PRODUCT_OWNER_REQUIRED"))
+                .andExpect(jsonPath("$.message").value("상품 소유자만 변경할 수 있습니다."));
     }
 
     @Test

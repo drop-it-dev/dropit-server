@@ -1,9 +1,11 @@
 package com.dropit.product.service;
 
+import com.dropit.global.exception.ServiceException;
 import com.dropit.product.dto.request.ProductCreateRequest;
 import com.dropit.product.dto.request.ProductUpdateRequest;
 import com.dropit.product.dto.response.ProductResponse;
 import com.dropit.product.entity.Product;
+import com.dropit.product.exception.ProductErrorCode;
 import com.dropit.product.repository.ProductRepository;
 import com.dropit.user.entity.User;
 import com.dropit.user.entity.UserRole;
@@ -11,6 +13,7 @@ import com.dropit.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -81,8 +84,8 @@ class ProductServiceTest {
         ProductCreateRequest request = createRequest();
         when(userRepository.findById(sellerId)).thenReturn(Optional.empty());
 
-        assertThrows(
-                IllegalArgumentException.class,
+        assertServiceException(
+                ProductErrorCode.SELLER_NOT_FOUND,
                 () -> productService.create(sellerId, request)
         );
 
@@ -97,8 +100,8 @@ class ProductServiceTest {
         ProductCreateRequest request = createRequest();
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-        assertThrows(
-                IllegalStateException.class,
+        assertServiceException(
+                ProductErrorCode.SELLER_ROLE_REQUIRED,
                 () -> productService.create(userId, request)
         );
 
@@ -140,8 +143,8 @@ class ProductServiceTest {
         Long productId = 999L;
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
 
-        assertThrows(
-                IllegalArgumentException.class,
+        assertServiceException(
+                ProductErrorCode.PRODUCT_NOT_FOUND,
                 () -> productService.getProduct(productId)
         );
     }
@@ -225,8 +228,8 @@ class ProductServiceTest {
         );
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
 
-        assertThrows(
-                IllegalArgumentException.class,
+        assertServiceException(
+                ProductErrorCode.PRODUCT_NOT_FOUND,
                 () -> productService.update(1L, productId, request)
         );
     }
@@ -256,8 +259,8 @@ class ProductServiceTest {
         );
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        assertThrows(
-                IllegalStateException.class,
+        assertServiceException(
+                ProductErrorCode.PRODUCT_OWNER_REQUIRED,
                 () -> productService.update(otherSellerId, productId, request)
         );
 
@@ -295,8 +298,8 @@ class ProductServiceTest {
         Long productId = 999L;
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
 
-        assertThrows(
-                IllegalArgumentException.class,
+        assertServiceException(
+                ProductErrorCode.PRODUCT_NOT_FOUND,
                 () -> productService.delete(1L, productId)
         );
 
@@ -322,8 +325,8 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(product, "id", productId);
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        assertThrows(
-                IllegalStateException.class,
+        assertServiceException(
+                ProductErrorCode.PRODUCT_OWNER_REQUIRED,
                 () -> productService.delete(otherSellerId, productId)
         );
 
@@ -336,6 +339,12 @@ class ProductServiceTest {
                 new BigDecimal("10000.00"),
                 "Description"
         );
+    }
+
+    private void assertServiceException(ProductErrorCode errorCode, Executable executable) {
+        ServiceException exception = assertThrows(ServiceException.class, executable);
+
+        assertEquals(errorCode, exception.getErrorCode());
     }
 
     private User createUser(UserRole role) {

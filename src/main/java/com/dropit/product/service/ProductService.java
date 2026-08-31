@@ -1,9 +1,11 @@
 package com.dropit.product.service;
 
+import com.dropit.global.exception.ServiceException;
 import com.dropit.product.dto.request.ProductCreateRequest;
 import com.dropit.product.dto.request.ProductUpdateRequest;
 import com.dropit.product.dto.response.ProductResponse;
 import com.dropit.product.entity.Product;
+import com.dropit.product.exception.ProductErrorCode;
 import com.dropit.product.repository.ProductRepository;
 import com.dropit.user.entity.User;
 import com.dropit.user.entity.UserRole;
@@ -24,10 +26,10 @@ public class ProductService {
     @Transactional
     public Long create(Long sellerId, ProductCreateRequest request) {
         User seller = userRepository.findById(sellerId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+                .orElseThrow(() -> new ServiceException(ProductErrorCode.SELLER_NOT_FOUND));
 
         if (seller.getRole() != UserRole.SELLER) {
-            throw new IllegalStateException("판매자만 상품을 등록할 수 있습니다.");
+            throw new ServiceException(ProductErrorCode.SELLER_ROLE_REQUIRED);
         }
 
         Product product = new Product(
@@ -46,7 +48,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public ProductResponse getProduct(Long productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 상품입니다."));
+                .orElseThrow(() -> new ServiceException(ProductErrorCode.PRODUCT_NOT_FOUND));
 
         return new ProductResponse(product);
     }
@@ -67,10 +69,10 @@ public class ProductService {
             ProductUpdateRequest request
     ) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 상품입니다."));
+                .orElseThrow(() -> new ServiceException(ProductErrorCode.PRODUCT_NOT_FOUND));
 
         if (!product.getSeller().getId().equals(sellerId)) {
-            throw new IllegalStateException("상품 소유자만 수정할 수 있습니다.");
+            throw new ServiceException(ProductErrorCode.PRODUCT_OWNER_REQUIRED);
         }
 
         product.updateInfo(
@@ -85,10 +87,10 @@ public class ProductService {
     @Transactional
     public void delete(Long sellerId, Long productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 상품입니다."));
+                .orElseThrow(() -> new ServiceException(ProductErrorCode.PRODUCT_NOT_FOUND));
 
         if (!product.getSeller().getId().equals(sellerId)) {
-            throw new IllegalStateException("상품 소유자만 삭제할 수 있습니다.");
+            throw new ServiceException(ProductErrorCode.PRODUCT_OWNER_REQUIRED);
         }
 
         productRepository.delete(product);
