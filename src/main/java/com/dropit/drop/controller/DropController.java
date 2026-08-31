@@ -42,4 +42,13 @@ public class DropController {
     ) {
         return ResponseEntity.ok(dropService.getOne(dropId));
     }
+
+    @PatchMapping("/drops/{dropId}")
+    public ResponseEntity<DropResponse> update(
+            @RequestParam Long userId, // TODO: 인증 기능 적용 후 SecurityContext의 로그인 사용자 정보에서 추출
+            @PathVariable Long dropId,
+            @Valid @RequestBody DropUpdateRequest request
+    ) {
+        return ResponseEntity.ok(dropService.update(userId, dropId, request));
+    }
 }

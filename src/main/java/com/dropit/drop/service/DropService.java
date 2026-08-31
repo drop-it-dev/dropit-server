@@ -3,7 +3,6 @@ package com.dropit.drop.service;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
-import com.dropit.drop.dto.response.DropStockResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
 import com.dropit.drop.repository.DropRepository;
@@ -53,6 +52,22 @@ public class DropService {
     public DropResponse getOne(Long dropId) {
         Drop drop = dropRepository.findById(dropId)
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
+
+        return DropResponse.from(drop);
+    }
+
+    @Transactional
+    public DropResponse update(Long sellerId, Long dropId, DropUpdateRequest request) {
+        Drop drop = dropRepository.findById(dropId)
+                .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
+
+        if (!Objects.equals(drop.getProduct().getSeller().getId(), sellerId)) {
+            throw new ServiceException(DropErrorCode.DROP_OWNER_REQUIRED);
+        }
+        
+        drop.ensureEditable(LocalDateTime.now());
+
+        drop.update(request.initialQuantity(), request.discountRate(), request.purchaseLimit(), request.openAt(), request.closeAt());
 
         return DropResponse.from(drop);
     }

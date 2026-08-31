@@ -2,7 +2,6 @@ package com.dropit.drop.entity;
 
 import com.dropit.drop.exception.DropErrorCode;
 import com.dropit.global.entity.BaseEntity;
-import com.dropit.global.exception.CommonErrorCode;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.product.entity.Product;
 import jakarta.persistence.*;
@@ -11,7 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 @Getter
 @Entity
@@ -53,6 +51,8 @@ public class Drop extends BaseEntity {
             LocalDateTime openAt,
             LocalDateTime closeAt
     ) {
+        validatePeriod(openAt, closeAt);
+
         this.product = product;
         this.initialQuantity = initialQuantity;
         this.remainingQuantity = initialQuantity;
@@ -69,5 +69,39 @@ public class Drop extends BaseEntity {
 
         // openAt <= now < closeAt
         return DropStatus.OPEN;
+    }
+
+    public void update(
+            Integer initialQuantity,
+            Integer discountRate,
+            Integer purchaseLimit,
+            LocalDateTime openAt,
+            LocalDateTime closeAt
+    ) {
+        int updatedInitialQuantity = initialQuantity != null ? initialQuantity : this.initialQuantity;
+        LocalDateTime updatedOpenAt = openAt != null ? openAt : this.openAt;
+        LocalDateTime updatedCloseAt = closeAt != null ? closeAt : this.closeAt;
+        validatePeriod(updatedOpenAt, updatedCloseAt);
+
+        if (this.remainingQuantity == this.initialQuantity) {
+            this.remainingQuantity = updatedInitialQuantity;
+        }
+        this.initialQuantity = updatedInitialQuantity;
+        this.discountRate = discountRate != null ? discountRate : this.discountRate;
+        this.purchaseLimit = purchaseLimit != null ? purchaseLimit : this.purchaseLimit;
+        this.openAt = updatedOpenAt;
+        this.closeAt = updatedCloseAt;
+    }
+
+    private static void validatePeriod(LocalDateTime openAt, LocalDateTime closeAt) {
+        if (!openAt.isBefore(closeAt)) {
+            throw new ServiceException(DropErrorCode.INVALID_DROP_PERIOD);
+        }
+    }
+
+    public void ensureEditable(LocalDateTime now) {
+        if (!now.isBefore(openAt)) {
+            throw new ServiceException(DropErrorCode.DROP_ALREADY_STARTED);
+        }
     }
 }
