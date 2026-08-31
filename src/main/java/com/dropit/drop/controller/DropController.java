@@ -30,4 +30,16 @@ public class DropController {
                 .created(URI.create("/drops/" + dropId))
                 .body(dropId);
     }
+
+    @GetMapping("/drops")
+    public ResponseEntity<List<DropResponse>> getAll() {
+        return ResponseEntity.ok(dropService.getAll());
+    }
+
+    @GetMapping("/drops/{dropId}")
+    public ResponseEntity<DropResponse> getOne(
+            @PathVariable Long dropId
+    ) {
+        return ResponseEntity.ok(dropService.getOne(dropId));
+    }
 }

@@ -41,4 +41,19 @@ public class DropService {
 
         return savedDrop.getId();
     }
+
+    @Transactional(readOnly = true)
+    public List<DropResponse> getAll() {
+        List<Drop> drops = dropRepository.findAll();
+
+        return drops.stream().map(DropResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public DropResponse getOne(Long dropId) {
+        Drop drop = dropRepository.findById(dropId)
+                .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
+
+        return DropResponse.from(drop);
+    }
 }
