@@ -1,7 +1,6 @@
 package com.dropit.product.service;
 
 import com.dropit.product.dto.request.ProductCreateRequest;
-import com.dropit.product.dto.response.ProductResponse;
 import com.dropit.product.entity.Product;
 import com.dropit.product.repository.ProductRepository;
 import com.dropit.user.entity.User;
@@ -17,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,7 +43,6 @@ class ProductServiceTest {
     void createProduct() {
         Long sellerId = 1L;
         User seller = createUser(UserRole.SELLER);
-        ReflectionTestUtils.setField(seller, "id", sellerId);
         ProductCreateRequest request = new ProductCreateRequest(
                 "Limited Hoodie",
                 new BigDecimal("59000.00"),
@@ -56,22 +53,12 @@ class ProductServiceTest {
         when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
             Product product = invocation.getArgument(0);
             ReflectionTestUtils.setField(product, "id", 100L);
-            ReflectionTestUtils.setField(product, "createdAt", LocalDateTime.of(2026, 8, 31, 10, 0));
-            ReflectionTestUtils.setField(product, "updatedAt", LocalDateTime.of(2026, 8, 31, 10, 0));
             return product;
         });
 
-        ProductResponse response = productService.createProduct(sellerId, request);
+        Long productId = productService.create(sellerId, request);
 
-        assertEquals(100L, response.getId());
-        assertEquals(sellerId, response.getSellerId());
-        assertEquals("username", response.getSellerName());
-        assertEquals("Limited Hoodie", response.getName());
-        assertEquals(new BigDecimal("59000.00"), response.getPrice());
-        assertEquals("Limited edition hoodie", response.getDescription());
-        assertNull(response.getImageUrl());
-        assertEquals(LocalDateTime.of(2026, 8, 31, 10, 0), response.getCreatedAt());
-        assertEquals(LocalDateTime.of(2026, 8, 31, 10, 0), response.getUpdatedAt());
+        assertEquals(100L, productId);
 
         ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
         verify(productRepository).save(productCaptor.capture());
@@ -93,7 +80,7 @@ class ProductServiceTest {
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> productService.createProduct(sellerId, request)
+                () -> productService.create(sellerId, request)
         );
 
         verify(productRepository, never()).save(any(Product.class));
@@ -109,7 +96,7 @@ class ProductServiceTest {
 
         assertThrows(
                 IllegalStateException.class,
-                () -> productService.createProduct(userId, request)
+                () -> productService.create(userId, request)
         );
 
         verify(productRepository, never()).save(any(Product.class));

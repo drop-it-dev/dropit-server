@@ -1,7 +1,6 @@
 package com.dropit.product.service;
 
 import com.dropit.product.dto.request.ProductCreateRequest;
-import com.dropit.product.dto.response.ProductResponse;
 import com.dropit.product.entity.Product;
 import com.dropit.product.repository.ProductRepository;
 import com.dropit.user.entity.User;
@@ -19,7 +18,7 @@ public class ProductService {
     private final UserRepository userRepository;
 
     @Transactional
-    public ProductResponse createProduct(Long sellerId, ProductCreateRequest request) {
+    public Long create(Long sellerId, ProductCreateRequest request) {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
@@ -37,6 +36,6 @@ public class ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        return new ProductResponse(savedProduct);
+        return savedProduct.getId();
     }
 }
