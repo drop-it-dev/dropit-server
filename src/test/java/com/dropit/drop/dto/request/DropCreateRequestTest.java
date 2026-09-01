@@ -36,7 +36,7 @@ class DropCreateRequestTest {
     @Test
     @DisplayName("잘못된 수량, 할인율, 구매 제한 수량은 검증에 실패한다")
     void rejectInvalidQuantityDiscountRateAndPurchaseLimit() {
-        DropCreateRequest request = createRequest(0, 100, -1);
+        DropCreateRequest request = createRequest(0, 101, -1);
 
         Set<ConstraintViolation<DropCreateRequest>> violations = validator.validate(request);
 

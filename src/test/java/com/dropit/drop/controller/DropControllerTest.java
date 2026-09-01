@@ -80,7 +80,7 @@ class DropControllerTest {
                                   "productId": 10,
                                   "price": 0,
                                   "initialQuantity": 0,
-                                  "discountRate": 100,
+                                  "discountRate": 101,
                                   "openAt": "2026-09-01T12:00:00",
                                   "closeAt": "2026-09-02T12:00:00"
                                 }
