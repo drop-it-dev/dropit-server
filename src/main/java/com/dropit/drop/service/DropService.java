@@ -2,6 +2,7 @@ package com.dropit.drop.service;
 
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropUpdateRequest;
+import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
@@ -34,7 +35,15 @@ public class DropService {
             throw new ServiceException(ProductErrorCode.PRODUCT_OWNER_REQUIRED);
         }
 
-        Drop drop = new Drop(product, request.initialQuantity(), request.discountRate(), request.purchaseLimit(), request.openAt(), request.closeAt());
+        Drop drop = new Drop(
+                product,
+                request.price(),
+                request.initialQuantity(),
+                request.discountRate(),
+                request.purchaseLimit(),
+                request.openAt(),
+                request.closeAt()
+        );
 
         Drop savedDrop = dropRepository.save(drop);
 
@@ -45,13 +54,20 @@ public class DropService {
     public List<DropResponse> getAll() {
         List<Drop> drops = dropRepository.findAll();
 
-        return drops.stream().map(DropResponse::from).toList();
+        return drops.stream()
+                .filter(Drop::isVisible)
+                .map(DropResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public DropResponse getOne(Long dropId) {
         Drop drop = dropRepository.findById(dropId)
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
+
+        if (!drop.isVisible()) {
+            throw new ServiceException(DropErrorCode.DROP_NOT_FOUND);
+        }
 
         return DropResponse.from(drop);
     }
@@ -67,7 +83,28 @@ public class DropService {
 
         drop.ensureEditable(LocalDateTime.now());
 
-        drop.update(request.initialQuantity(), request.discountRate(), request.purchaseLimit(), request.openAt(), request.closeAt());
+        drop.update(
+                request.price(),
+                request.initialQuantity(),
+                request.discountRate(),
+                request.purchaseLimit(),
+                request.openAt(),
+                request.closeAt()
+        );
+
+        return DropResponse.from(drop);
+    }
+
+    @Transactional
+    public DropResponse changeVisibility(Long sellerId, Long dropId, DropVisibilityUpdateRequest request) {
+        Drop drop = dropRepository.findById(dropId)
+                .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
+
+        if (!Objects.equals(drop.getProduct().getSeller().getId(), sellerId)) {
+            throw new ServiceException(DropErrorCode.DROP_OWNER_REQUIRED);
+        }
+
+        drop.changeVisibility(request.visible());
 
         return DropResponse.from(drop);
     }

@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -25,6 +26,9 @@ public class Drop extends BaseEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    @Column(nullable = false, precision = 13, scale = 0)
+    private BigDecimal price;
+
     @Column(name = "initial_quantity", nullable = false)
     private int initialQuantity;
 
@@ -37,6 +41,9 @@ public class Drop extends BaseEntity {
     @Column(name = "purchase_limit", nullable = false)
     private int purchaseLimit; // 0이면 1인당 구매 제한 없음
 
+    @Column(nullable = false)
+    private boolean visible = false;
+
     @Column(name = "open_at", nullable = false)
     private LocalDateTime openAt;
 
@@ -45,6 +52,7 @@ public class Drop extends BaseEntity {
 
     public Drop(
             Product product,
+            BigDecimal price,
             int initialQuantity,
             int discountRate,
             int purchaseLimit,
@@ -54,6 +62,7 @@ public class Drop extends BaseEntity {
         validatePeriod(openAt, closeAt);
 
         this.product = product;
+        this.price = price;
         this.initialQuantity = initialQuantity;
         this.remainingQuantity = initialQuantity;
         this.discountRate = discountRate;
@@ -72,6 +81,7 @@ public class Drop extends BaseEntity {
     }
 
     public void update(
+            BigDecimal price,
             Integer initialQuantity,
             Integer discountRate,
             Integer purchaseLimit,
@@ -87,6 +97,7 @@ public class Drop extends BaseEntity {
             this.remainingQuantity = updatedInitialQuantity;
         }
         this.initialQuantity = updatedInitialQuantity;
+        this.price = price != null ? price : this.price;
         this.discountRate = discountRate != null ? discountRate : this.discountRate;
         this.purchaseLimit = purchaseLimit != null ? purchaseLimit : this.purchaseLimit;
         this.openAt = updatedOpenAt;
@@ -103,5 +114,9 @@ public class Drop extends BaseEntity {
         if (!now.isBefore(openAt)) {
             throw new ServiceException(DropErrorCode.DROP_ALREADY_STARTED);
         }
+    }
+
+    public void changeVisibility(boolean visible) {
+        this.visible = visible;
     }
 }

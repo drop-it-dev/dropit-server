@@ -2,6 +2,7 @@ package com.dropit.drop.controller;
 
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropUpdateRequest;
+import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.service.DropService;
 import jakarta.validation.Valid;
@@ -49,6 +50,15 @@ public class DropController {
             @Valid @RequestBody DropUpdateRequest request
     ) {
         return ResponseEntity.ok(dropService.update(userId, dropId, request));
+    }
+
+    @PatchMapping("/drops/{dropId}/visibility")
+    public ResponseEntity<DropResponse> changeVisibility(
+            @RequestParam Long userId, // TODO: 인증 기능 적용 후 SecurityContext의 로그인 사용자 정보에서 추출
+            @PathVariable Long dropId,
+            @Valid @RequestBody DropVisibilityUpdateRequest request
+    ) {
+        return ResponseEntity.ok(dropService.changeVisibility(userId, dropId, request));
     }
 
     @DeleteMapping("/drops/{dropId}")

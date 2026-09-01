@@ -15,7 +15,7 @@ public record DropResponse(
         String productName,
         String imageUrl,
 
-        BigDecimal productPrice,
+        BigDecimal price,
         int discountRate,
 
         int initialQuantity,
@@ -23,6 +23,8 @@ public record DropResponse(
         int soldQuantity,
 
         int purchaseLimit,
+
+        boolean visible,
 
         LocalDateTime openAt,
         LocalDateTime closeAt,
@@ -39,7 +41,7 @@ public record DropResponse(
                 drop.getProduct().getName(),
                 drop.getProduct().getImageUrl(),
 
-                drop.getProduct().getPrice(),
+                drop.getPrice(),
                 drop.getDiscountRate(),
 
                 drop.getInitialQuantity(),
@@ -47,6 +49,8 @@ public record DropResponse(
                 drop.getInitialQuantity() - drop.getRemainingQuantity(),
 
                 drop.getPurchaseLimit(),
+
+                drop.isVisible(),
 
                 drop.getOpenAt(),
                 drop.getCloseAt(),

@@ -6,7 +6,6 @@ import jakarta.validation.Validator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,7 +20,6 @@ class ProductUpdateRequestTest {
     void acceptValidRequest() {
         ProductUpdateRequest request = new ProductUpdateRequest(
                 "Updated Product",
-                new BigDecimal("49000.00"),
                 "Updated description"
         );
 
@@ -33,7 +31,6 @@ class ProductUpdateRequestTest {
     void rejectBlankName() {
         ProductUpdateRequest request = new ProductUpdateRequest(
                 "   ",
-                new BigDecimal("49000.00"),
                 null
         );
 
@@ -41,21 +38,10 @@ class ProductUpdateRequestTest {
     }
 
     @Test
-    @DisplayName("상품 수정 시 가격은 필수이며 0보다 커야 한다")
-    void rejectMissingOrNonPositivePrice() {
-        ProductUpdateRequest missingPrice = new ProductUpdateRequest("Product", null, null);
-        ProductUpdateRequest zeroPrice = new ProductUpdateRequest("Product", BigDecimal.ZERO, null);
-
-        assertViolationCount(missingPrice, "price", 1);
-        assertViolationCount(zeroPrice, "price", 1);
-    }
-
-    @Test
     @DisplayName("상품 수정 시 상품 설명은 3000자를 초과할 수 없다")
     void rejectTooLongDescription() {
         ProductUpdateRequest request = new ProductUpdateRequest(
                 "Product",
-                new BigDecimal("49000.00"),
                 "a".repeat(3001)
         );
 
