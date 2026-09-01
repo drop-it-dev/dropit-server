@@ -22,7 +22,7 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, unique = true, length = 100)
     private String username;
 
     @Enumerated(EnumType.STRING)
@@ -33,6 +33,22 @@ public class User extends BaseEntity {
         this.email = email;
         this.password = password;
         this.username = username;
+        this.role = role;
+    }
+
+    public void updateEmail(String email) {
+        this.email = email;
+    }
+
+    public void updateUsername(String username) {
+        this.username = username;
+    }
+
+    public void updatePassword(String password) {
+        this.password = password;
+    }
+
+    public void updateRole(UserRole role) {
         this.role = role;
     }
 }
