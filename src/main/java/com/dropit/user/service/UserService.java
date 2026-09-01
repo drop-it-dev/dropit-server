@@ -1,14 +1,14 @@
 package com.dropit.user.service;
 
+import com.dropit.global.exception.ServiceException;
 import com.dropit.user.dto.request.PasswordUpdateRequest;
 import com.dropit.user.dto.request.UserUpdateRequest;
 import com.dropit.user.entity.User;
+import com.dropit.user.exception.UserErrorCode;
 import com.dropit.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Objects;
 
@@ -21,10 +21,9 @@ public class UserService {
     @Transactional(readOnly = true)
     public User findUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "User not found."
-                ));
+                .orElseThrow(() ->
+                        new ServiceException(UserErrorCode.USER_NOT_FOUND)
+                );
     }
 
     @Transactional
@@ -38,9 +37,8 @@ public class UserService {
                 && !Objects.equals(user.getEmail(), request.email())) {
 
             if (userRepository.existsByEmail(request.email())) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Email already exists."
+                throw new ServiceException(
+                        UserErrorCode.EMAIL_ALREADY_EXISTS
                 );
             }
 
@@ -51,9 +49,8 @@ public class UserService {
                 && !Objects.equals(user.getUsername(), request.username())) {
 
             if (userRepository.existsByUsername(request.username())) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Username already exists."
+                throw new ServiceException(
+                        UserErrorCode.USERNAME_ALREADY_EXISTS
                 );
             }
 
@@ -74,12 +71,11 @@ public class UserService {
                 user.getPassword(),
                 request.currentPassword()
         )) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Current password is incorrect."
+            throw new ServiceException(
+                    UserErrorCode.INVALID_CURRENT_PASSWORD
             );
         }
-        // dirty checking
+
         user.updatePassword(request.newPassword());
     }
 
