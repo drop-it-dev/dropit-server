@@ -19,7 +19,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,7 +65,6 @@ class ProductControllerTest {
                         .content("""
                                 {
                                   "name": "Limited Hoodie",
-                                  "price": 59000.00,
                                   "description": "Limited edition hoodie"
                                 }
                                 """))
@@ -80,7 +78,6 @@ class ProductControllerTest {
 
         ProductCreateRequest request = requestCaptor.getValue();
         assertEquals("Limited Hoodie", request.getName());
-        assertEquals(new BigDecimal("59000.00"), request.getPrice());
         assertEquals("Limited edition hoodie", request.getDescription());
     }
 
@@ -92,7 +89,6 @@ class ProductControllerTest {
                         .content("""
                                 {
                                   "name": "Product",
-                                  "price": 10000.00,
                                   "description": "Description"
                                 }
                                 """))
@@ -110,25 +106,6 @@ class ProductControllerTest {
                         .content("""
                                 {
                                   "name": "   ",
-                                  "price": 59000.00,
-                                  "description": "Description"
-                                }
-                                """))
-                .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(productService);
-    }
-
-    @Test
-    @DisplayName("상품 가격이 0이면 400 상태를 반환한다")
-    void rejectZeroPrice() throws Exception {
-        mockMvc.perform(post("/products")
-                        .param("sellerId", "1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "name": "Product",
-                                  "price": 0,
                                   "description": "Description"
                                 }
                                 """))
@@ -160,7 +137,6 @@ class ProductControllerTest {
                         .content("""
                                 {
                                   "name": "Product",
-                                  "price": 10000.00,
                                   "description": "Description"
                                 }
                                 """))
@@ -181,7 +157,6 @@ class ProductControllerTest {
                         .content("""
                                 {
                                   "name": "Product",
-                                  "price": 10000.00,
                                   "description": "Description"
                                 }
                                 """))
@@ -216,7 +191,6 @@ class ProductControllerTest {
         Product product = new Product(
                 seller,
                 "Limited Hoodie",
-                new BigDecimal("59000.00"),
                 "Limited edition hoodie",
                 null
         );
@@ -231,7 +205,7 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$[0].sellerId").value(1L))
                 .andExpect(jsonPath("$[0].sellerName").value("seller"))
                 .andExpect(jsonPath("$[0].name").value("Limited Hoodie"))
-                .andExpect(jsonPath("$[0].price").value(59000.00))
+                .andExpect(jsonPath("$[0].price").doesNotExist())
                 .andExpect(jsonPath("$[0].description").value("Limited edition hoodie"));
 
         verify(productService).getProducts();
@@ -253,7 +227,6 @@ class ProductControllerTest {
         Product product = new Product(
                 seller,
                 "Updated Product",
-                new BigDecimal("49000.00"),
                 "Updated description",
                 null
         );
@@ -268,7 +241,6 @@ class ProductControllerTest {
                         .content("""
                                 {
                                   "name": "Updated Product",
-                                  "price": 49000.00,
                                   "description": "Updated description"
                                 }
                                 """))
@@ -276,7 +248,7 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.id").value(productId))
                 .andExpect(jsonPath("$.sellerId").value(sellerId))
                 .andExpect(jsonPath("$.name").value("Updated Product"))
-                .andExpect(jsonPath("$.price").value(49000.00))
+                .andExpect(jsonPath("$.price").doesNotExist())
                 .andExpect(jsonPath("$.description").value("Updated description"));
 
         ArgumentCaptor<ProductUpdateRequest> requestCaptor =
@@ -285,7 +257,6 @@ class ProductControllerTest {
 
         ProductUpdateRequest request = requestCaptor.getValue();
         assertEquals("Updated Product", request.getName());
-        assertEquals(new BigDecimal("49000.00"), request.getPrice());
         assertEquals("Updated description", request.getDescription());
     }
 
@@ -298,7 +269,6 @@ class ProductControllerTest {
                         .content("""
                                 {
                                   "name": "   ",
-                                  "price": 49000.00,
                                   "description": "Updated description"
                                 }
                                 """))
@@ -319,7 +289,6 @@ class ProductControllerTest {
                         .content("""
                                 {
                                   "name": "Updated Product",
-                                  "price": 49000.00,
                                   "description": "Updated description"
                                 }
                                 """))
