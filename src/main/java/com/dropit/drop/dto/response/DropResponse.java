@@ -24,6 +24,8 @@ public record DropResponse(
 
         int purchaseLimit,
 
+        boolean visible,
+
         LocalDateTime openAt,
         LocalDateTime closeAt,
 
@@ -47,6 +49,8 @@ public record DropResponse(
                 drop.getInitialQuantity() - drop.getRemainingQuantity(),
 
                 drop.getPurchaseLimit(),
+
+                drop.isVisible(),
 
                 drop.getOpenAt(),
                 drop.getCloseAt(),

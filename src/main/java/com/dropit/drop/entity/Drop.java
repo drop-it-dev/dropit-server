@@ -41,6 +41,9 @@ public class Drop extends BaseEntity {
     @Column(name = "purchase_limit", nullable = false)
     private int purchaseLimit; // 0이면 1인당 구매 제한 없음
 
+    @Column(nullable = false)
+    private boolean visible = false;
+
     @Column(name = "open_at", nullable = false)
     private LocalDateTime openAt;
 
@@ -111,5 +114,9 @@ public class Drop extends BaseEntity {
         if (!now.isBefore(openAt)) {
             throw new ServiceException(DropErrorCode.DROP_ALREADY_STARTED);
         }
+    }
+
+    public void changeVisibility(boolean visible) {
+        this.visible = visible;
     }
 }
