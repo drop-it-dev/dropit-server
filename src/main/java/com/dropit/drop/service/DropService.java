@@ -34,7 +34,15 @@ public class DropService {
             throw new ServiceException(ProductErrorCode.PRODUCT_OWNER_REQUIRED);
         }
 
-        Drop drop = new Drop(product, request.initialQuantity(), request.discountRate(), request.purchaseLimit(), request.openAt(), request.closeAt());
+        Drop drop = new Drop(
+                product,
+                request.price(),
+                request.initialQuantity(),
+                request.discountRate(),
+                request.purchaseLimit(),
+                request.openAt(),
+                request.closeAt()
+        );
 
         Drop savedDrop = dropRepository.save(drop);
 
@@ -67,7 +75,14 @@ public class DropService {
 
         drop.ensureEditable(LocalDateTime.now());
 
-        drop.update(request.initialQuantity(), request.discountRate(), request.purchaseLimit(), request.openAt(), request.closeAt());
+        drop.update(
+                request.price(),
+                request.initialQuantity(),
+                request.discountRate(),
+                request.purchaseLimit(),
+                request.openAt(),
+                request.closeAt()
+        );
 
         return DropResponse.from(drop);
     }

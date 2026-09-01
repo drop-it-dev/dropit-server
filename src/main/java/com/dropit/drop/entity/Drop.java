@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -24,6 +25,9 @@ public class Drop extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal price;
 
     @Column(name = "initial_quantity", nullable = false)
     private int initialQuantity;
@@ -45,6 +49,7 @@ public class Drop extends BaseEntity {
 
     public Drop(
             Product product,
+            BigDecimal price,
             int initialQuantity,
             int discountRate,
             int purchaseLimit,
@@ -54,6 +59,7 @@ public class Drop extends BaseEntity {
         validatePeriod(openAt, closeAt);
 
         this.product = product;
+        this.price = price;
         this.initialQuantity = initialQuantity;
         this.remainingQuantity = initialQuantity;
         this.discountRate = discountRate;
@@ -72,6 +78,7 @@ public class Drop extends BaseEntity {
     }
 
     public void update(
+            BigDecimal price,
             Integer initialQuantity,
             Integer discountRate,
             Integer purchaseLimit,
@@ -87,6 +94,7 @@ public class Drop extends BaseEntity {
             this.remainingQuantity = updatedInitialQuantity;
         }
         this.initialQuantity = updatedInitialQuantity;
+        this.price = price != null ? price : this.price;
         this.discountRate = discountRate != null ? discountRate : this.discountRate;
         this.purchaseLimit = purchaseLimit != null ? purchaseLimit : this.purchaseLimit;
         this.openAt = updatedOpenAt;

@@ -35,7 +35,6 @@ public class ProductService {
         Product product = new Product(
                 seller,
                 request.getName(),
-                request.getPrice(),
                 request.getDescription(),
                 null
         );
@@ -77,7 +76,6 @@ public class ProductService {
 
         product.updateInfo(
                 request.getName(),
-                request.getPrice(),
                 request.getDescription()
         );
 

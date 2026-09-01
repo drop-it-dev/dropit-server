@@ -15,7 +15,7 @@ public record DropResponse(
         String productName,
         String imageUrl,
 
-        BigDecimal productPrice,
+        BigDecimal price,
         int discountRate,
 
         int initialQuantity,
@@ -39,7 +39,7 @@ public record DropResponse(
                 drop.getProduct().getName(),
                 drop.getProduct().getImageUrl(),
 
-                drop.getProduct().getPrice(),
+                drop.getPrice(),
                 drop.getDiscountRate(),
 
                 drop.getInitialQuantity(),
