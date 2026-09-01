@@ -8,6 +8,7 @@ import com.dropit.sellerprofile.entity.SellerProfile;
 import com.dropit.sellerprofile.exception.SellerProfileErrorCode;
 import com.dropit.sellerprofile.repository.SellerProfileRepository;
 import com.dropit.user.entity.User;
+import com.dropit.user.entity.UserRole;
 import com.dropit.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,12 @@ public class SellerProfileService {
     @Transactional
     public SellerProfileResponse create(Long userId, SellerProfileCreateRequest request) {
         User user = findUser(userId);
+
+        if (user.getRole() != UserRole.SELLER) {
+            throw new ServiceException(
+                    SellerProfileErrorCode.SELLER_ROLE_REQUIRED
+            );
+        }
 
         if (sellerProfileRepository.existsByUser_Id(userId)) {
             throw new ServiceException(
