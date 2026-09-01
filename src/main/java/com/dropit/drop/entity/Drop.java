@@ -26,7 +26,7 @@ public class Drop extends BaseEntity {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(nullable = false, precision = 15, scale = 2)
+    @Column(nullable = false, precision = 13, scale = 0)
     private BigDecimal price;
 
     @Column(name = "initial_quantity", nullable = false)

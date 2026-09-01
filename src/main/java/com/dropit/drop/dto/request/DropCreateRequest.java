@@ -16,7 +16,7 @@ public record DropCreateRequest(
 
         @NotNull(message = "가격은 필수입니다.")
         @Positive(message = "가격은 0보다 커야 합니다.")
-        @Digits(integer = 13, fraction = 2, message = "가격은 정수 13자리와 소수 2자리까지 입력할 수 있습니다.")
+        @Digits(integer = 13, fraction = 0, message = "가격은 원 단위 정수로 입력해야 합니다.")
         BigDecimal price,
 
         @Positive(message = "초기 수량은 1개 이상이어야 합니다.")
