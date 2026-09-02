@@ -15,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -36,8 +35,16 @@ public class DropController {
     }
 
     @GetMapping("/drops")
-    public ResponseEntity<List<DropResponse>> getAll() {
-        return ResponseEntity.ok(dropService.getAll());
+    public ResponseEntity<Page<DropResponse>> getAll(
+            @PageableDefault(
+                    size = 20,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable
+    ) {
+        Page<DropResponse> response = dropService.getAll(pageable);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/drops/{dropId}")

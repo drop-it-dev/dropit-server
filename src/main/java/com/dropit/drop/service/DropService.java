@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -53,13 +52,10 @@ public class DropService {
     }
 
     @Transactional(readOnly = true)
-    public List<DropResponse> getAll() {
-        List<Drop> drops = dropRepository.findAll();
+    public Page<DropResponse> getAll(Pageable pageable) {
+        Page<Drop> drops = dropRepository.findAllByVisibleTrue(pageable);
 
-        return drops.stream()
-                .filter(Drop::isVisible)
-                .map(DropResponse::from)
-                .toList();
+        return drops.map(DropResponse::from);
     }
 
     @Transactional(readOnly = true)
