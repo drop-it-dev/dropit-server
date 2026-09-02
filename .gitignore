@@ -40,3 +40,7 @@ out/
 .env
 .env.*
 !.env.example
+
+### Performance test reports ###
+performance/reports/*.html
+/상품-부하테스트-결과.zip
