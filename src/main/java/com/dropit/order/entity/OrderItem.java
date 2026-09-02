@@ -63,7 +63,15 @@ public class OrderItem extends BaseEntity {
         this.unitPrice = unitPrice;
         this.discountRate = discountRate;
         this.quantity = quantity;
-        this.itemTotalPrice = unitPrice
+        this.itemTotalPrice = calculateItemTotalPrice(unitPrice, discountRate, quantity);
+    }
+
+    public static BigDecimal calculateItemTotalPrice(
+            BigDecimal unitPrice,
+            int discountRate,
+            int quantity
+    ) {
+        return unitPrice
                 .multiply(BigDecimal.ONE.subtract(BigDecimal.valueOf(discountRate).movePointLeft(2)))
                 .multiply(BigDecimal.valueOf(quantity))
                 .setScale(0, RoundingMode.DOWN);
