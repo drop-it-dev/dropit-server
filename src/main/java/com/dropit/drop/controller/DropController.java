@@ -7,6 +7,10 @@ import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.service.DropService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,6 +45,40 @@ public class DropController {
             @PathVariable Long dropId
     ) {
         return ResponseEntity.ok(dropService.getOne(dropId));
+    }
+
+    @GetMapping("/creators/{sellerId}/drops")
+    public ResponseEntity<Page<DropResponse>> getPublicDropsBySeller(
+            @PathVariable Long sellerId,
+            @PageableDefault(
+                    size = 20,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable
+    ) {
+        Page<DropResponse> response = dropService.getPublicDropsBySeller(
+                sellerId,
+                pageable
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/sellers/{sellerId}/drops")
+    public ResponseEntity<Page<DropResponse>> getDropsForSellerManagement(
+            @PathVariable Long sellerId, // TODO: 인증 기능 적용 후 로그인 사용자 ID로 교체
+            @PageableDefault(
+                    size = 20,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable
+    ) {
+        Page<DropResponse> response = dropService.getDropsForSellerManagement(
+                sellerId,
+                pageable
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/drops/{dropId}")

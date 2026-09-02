@@ -12,6 +12,8 @@ import com.dropit.product.entity.Product;
 import com.dropit.product.exception.ProductErrorCode;
 import com.dropit.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,6 +72,32 @@ public class DropService {
         }
 
         return DropResponse.from(drop);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<DropResponse> getPublicDropsBySeller(
+            Long sellerId,
+            Pageable pageable
+    ) {
+        Page<Drop> drops = dropRepository.findAllByProductSellerIdAndVisibleTrue(
+                sellerId,
+                pageable
+        );
+
+        return drops.map(DropResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<DropResponse> getDropsForSellerManagement(
+            Long sellerId,
+            Pageable pageable
+    ) {
+        Page<Drop> drops = dropRepository.findAllByProductSellerId(
+                sellerId,
+                pageable
+        );
+
+        return drops.map(DropResponse::from);
     }
 
     @Transactional
