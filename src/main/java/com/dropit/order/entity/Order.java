@@ -1,6 +1,5 @@
 package com.dropit.order.entity;
 
-import com.dropit.drop.entity.Drop;
 import com.dropit.global.entity.BaseEntity;
 import com.dropit.user.entity.User;
 import jakarta.persistence.*;
@@ -24,20 +23,12 @@ public class Order extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "drop_id", nullable = false)
-    private Drop drop;
+    // 모든 주문 항목의 금액을 합한 전체 결제 금액
+    @Column(name = "total_price", nullable = false, precision = 13, scale = 0)
+    private BigDecimal totalPrice;
 
-    @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal price;
-
-    @Column(name = "order_quantity", nullable = false)
-    private int orderQuantity;
-
-    public Order(User user, Drop drop, BigDecimal price, int orderQuantity) {
+    public Order(User user, BigDecimal totalPrice) {
         this.user = user;
-        this.drop = drop;
-        this.price = price;
-        this.orderQuantity = orderQuantity;
+        this.totalPrice = totalPrice;
     }
 }
