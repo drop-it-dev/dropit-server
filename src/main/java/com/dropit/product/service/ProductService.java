@@ -11,10 +11,10 @@ import com.dropit.user.entity.User;
 import com.dropit.user.entity.UserRole;
 import com.dropit.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -53,12 +53,24 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> getProducts() {
-        List<Product> products = productRepository.findAll();
+    public Page<ProductResponse> getProducts(Pageable pageable) {
+        Page<Product> products = productRepository.findAll(pageable);
 
-        return products.stream()
-                .map(product -> new ProductResponse(product))
-                .toList();
+        return products.map(product -> new ProductResponse(product));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getProductsBySeller(Long sellerId, Pageable pageable) {
+        User seller = userRepository.findById(sellerId)
+                .orElseThrow(() -> new ServiceException(ProductErrorCode.SELLER_NOT_FOUND));
+
+        if (seller.getRole() != UserRole.SELLER) {
+            throw new ServiceException(ProductErrorCode.SELLER_NOT_FOUND);
+        }
+
+        Page<Product> products = productRepository.findAllBySellerId(sellerId, pageable);
+
+        return products.map(product -> new ProductResponse(product));
     }
 
     @Transactional
