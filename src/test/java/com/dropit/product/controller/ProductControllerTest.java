@@ -14,10 +14,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 
 import java.util.List;
 
@@ -49,6 +53,7 @@ class ProductControllerTest {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(productController)
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
     }
 
@@ -196,19 +201,23 @@ class ProductControllerTest {
         );
         ReflectionTestUtils.setField(product, "id", 100L);
 
-        when(productService.getProducts())
-                .thenReturn(List.of(new ProductResponse(product)));
+        when(productService.getProducts(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(
+                        List.of(new ProductResponse(product)),
+                        PageRequest.of(0, 20),
+                        1
+                ));
 
         mockMvc.perform(get("/products"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(100L))
-                .andExpect(jsonPath("$[0].sellerId").value(1L))
-                .andExpect(jsonPath("$[0].sellerName").value("seller"))
-                .andExpect(jsonPath("$[0].name").value("Limited Hoodie"))
-                .andExpect(jsonPath("$[0].price").doesNotExist())
-                .andExpect(jsonPath("$[0].description").value("Limited edition hoodie"));
+                .andExpect(jsonPath("$.content[0].id").value(100L))
+                .andExpect(jsonPath("$.content[0].sellerId").value(1L))
+                .andExpect(jsonPath("$.content[0].sellerName").value("seller"))
+                .andExpect(jsonPath("$.content[0].name").value("Limited Hoodie"))
+                .andExpect(jsonPath("$.content[0].price").doesNotExist())
+                .andExpect(jsonPath("$.content[0].description").value("Limited edition hoodie"));
 
-        verify(productService).getProducts();
+        verify(productService).getProducts(any(Pageable.class));
     }
 
     @Test

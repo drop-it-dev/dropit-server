@@ -1,6 +1,7 @@
 package com.dropit.drop.controller;
 
 import com.dropit.drop.dto.request.DropCreateRequest;
+import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
 import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
@@ -36,13 +37,10 @@ public class DropController {
 
     @GetMapping("/drops")
     public ResponseEntity<Page<DropResponse>> getAll(
-            @PageableDefault(
-                    size = 20,
-                    sort = "createdAt",
-                    direction = Sort.Direction.DESC
-            ) Pageable pageable
+            @ModelAttribute DropSearchCondition condition,
+            @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<DropResponse> response = dropService.getAll(pageable);
+        Page<DropResponse> response = dropService.getAll(condition, pageable);
 
         return ResponseEntity.ok(response);
     }

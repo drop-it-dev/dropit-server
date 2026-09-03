@@ -1,6 +1,7 @@
 package com.dropit.drop.controller;
 
 import com.dropit.drop.dto.response.DropResponse;
+import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.entity.DropStatus;
 import com.dropit.drop.service.DropService;
 import com.dropit.global.exception.GlobalExceptionHandler;
@@ -10,10 +11,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -41,6 +46,7 @@ class DropControllerTest {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(new DropController(dropService))
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .setValidator(validator)
                 .build();
     }
@@ -97,12 +103,20 @@ class DropControllerTest {
     @DisplayName("드랍 목록과 상세 조회 요청 시 200 상태를 반환한다")
     void getAllAndOneDrop() throws Exception {
         DropResponse response = response();
-        when(dropService.getAll()).thenReturn(List.of(response));
+        when(dropService.getAll(
+                any(DropSearchCondition.class),
+                any(Pageable.class)
+        ))
+                .thenReturn(new PageImpl<>(
+                        List.of(response),
+                        PageRequest.of(0, 20),
+                        1
+                ));
         when(dropService.getOne(100L)).thenReturn(response);
 
         mockMvc.perform(get("/drops"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(100));
+                .andExpect(jsonPath("$.content[0].id").value(100));
         mockMvc.perform(get("/drops/100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productId").value(1));

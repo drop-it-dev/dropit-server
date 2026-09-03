@@ -18,6 +18,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -165,14 +169,16 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(firstProduct, "id", 1L);
         ReflectionTestUtils.setField(secondProduct, "id", 2L);
 
-        when(productRepository.findAll()).thenReturn(List.of(firstProduct, secondProduct));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(productRepository.findAll(pageable))
+                .thenReturn(new PageImpl<>(List.of(firstProduct, secondProduct), pageable, 2));
 
-        List<ProductResponse> response = productService.getProducts();
+        Page<ProductResponse> response = productService.getProducts(pageable);
 
-        assertEquals(2, response.size());
-        assertEquals("First Product", response.get(0).getName());
-        assertEquals("Second Product", response.get(1).getName());
-        verify(productRepository).findAll();
+        assertEquals(2, response.getTotalElements());
+        assertEquals("First Product", response.getContent().get(0).getName());
+        assertEquals("Second Product", response.getContent().get(1).getName());
+        verify(productRepository).findAll(pageable);
     }
 
     @Test
