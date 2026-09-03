@@ -15,8 +15,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 @Getter
 @Entity
 @Table(name = "products")
@@ -34,26 +32,21 @@ public class Product extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal price;
-
     @Column(columnDefinition = "text")
     private String description;
 
     @Column(name = "image_url", length = 2048)
     private String imageUrl;
 
-    public Product(User seller, String name, BigDecimal price, String description, String imageUrl) {
+    public Product(User seller, String name, String description, String imageUrl) {
         this.seller = seller;
         this.name = name;
-        this.price = price;
         this.description = description;
         this.imageUrl = imageUrl;
     }
 
-    public void updateInfo(String name, BigDecimal price, String description) {
+    public void updateInfo(String name, String description) {
         this.name = name;
-        this.price = price;
         this.description = description;
     }
 

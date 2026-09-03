@@ -6,7 +6,6 @@ import jakarta.validation.Validator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,7 +20,6 @@ class ProductCreateRequestTest {
     void acceptValidRequest() {
         ProductCreateRequest request = new ProductCreateRequest(
                 "Limited Hoodie",
-                new BigDecimal("59000.00"),
                 "Limited edition hoodie"
         );
 
@@ -33,7 +31,6 @@ class ProductCreateRequestTest {
     void rejectBlankName() {
         ProductCreateRequest request = new ProductCreateRequest(
                 "   ",
-                new BigDecimal("59000.00"),
                 null
         );
 
@@ -45,39 +42,10 @@ class ProductCreateRequestTest {
     void rejectTooLongName() {
         ProductCreateRequest request = new ProductCreateRequest(
                 "a".repeat(101),
-                new BigDecimal("59000.00"),
                 null
         );
 
         assertViolationCount(request, "name", 1);
-    }
-
-    @Test
-    @DisplayName("가격은 필수이며 0보다 커야 한다")
-    void rejectMissingOrNonPositivePrice() {
-        ProductCreateRequest missingPrice = new ProductCreateRequest("Product", null, null);
-        ProductCreateRequest zeroPrice = new ProductCreateRequest("Product", BigDecimal.ZERO, null);
-
-        assertViolationCount(missingPrice, "price", 1);
-        assertViolationCount(zeroPrice, "price", 1);
-    }
-
-    @Test
-    @DisplayName("가격은 DB 컬럼 범위인 정수 13자리와 소수 2자리를 넘을 수 없다")
-    void rejectPriceOutsideColumnRange() {
-        ProductCreateRequest tooManyIntegerDigits = new ProductCreateRequest(
-                "Product",
-                new BigDecimal("12345678901234.00"),
-                null
-        );
-        ProductCreateRequest tooManyFractionDigits = new ProductCreateRequest(
-                "Product",
-                new BigDecimal("1000.001"),
-                null
-        );
-
-        assertViolationCount(tooManyIntegerDigits, "price", 1);
-        assertViolationCount(tooManyFractionDigits, "price", 1);
     }
 
     private void assertViolationCount(

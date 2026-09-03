@@ -46,4 +46,16 @@ public class SellerProfile extends BaseEntity {
         this.instagramUrl = instagramUrl;
         this.youtubeUrl = youtubeUrl;
     }
+
+    public void update(
+            String description,
+            String imageUrl,
+            String instagramUrl,
+            String youtubeUrl
+    ) {
+        this.description = description;
+        this.imageUrl = imageUrl;
+        this.instagramUrl = instagramUrl;
+        this.youtubeUrl = youtubeUrl;
+    }
 }

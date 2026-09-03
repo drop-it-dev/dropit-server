@@ -20,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,7 +50,6 @@ class ProductServiceTest {
         User seller = createUser(UserRole.SELLER);
         ProductCreateRequest request = new ProductCreateRequest(
                 "Limited Hoodie",
-                new BigDecimal("59000.00"),
                 "Limited edition hoodie"
         );
 
@@ -72,7 +70,6 @@ class ProductServiceTest {
         Product savedProduct = productCaptor.getValue();
         assertEquals(seller, savedProduct.getSeller());
         assertEquals("Limited Hoodie", savedProduct.getName());
-        assertEquals(new BigDecimal("59000.00"), savedProduct.getPrice());
         assertEquals("Limited edition hoodie", savedProduct.getDescription());
         assertNull(savedProduct.getImageUrl());
     }
@@ -118,7 +115,6 @@ class ProductServiceTest {
         Product product = new Product(
                 seller,
                 "Limited Hoodie",
-                new BigDecimal("59000.00"),
                 "Limited edition hoodie",
                 "products/limited-hoodie.webp"
         );
@@ -132,7 +128,6 @@ class ProductServiceTest {
         assertEquals(1L, response.getSellerId());
         assertEquals("username", response.getSellerName());
         assertEquals("Limited Hoodie", response.getName());
-        assertEquals(new BigDecimal("59000.00"), response.getPrice());
         assertEquals("Limited edition hoodie", response.getDescription());
         assertEquals("products/limited-hoodie.webp", response.getImageUrl());
     }
@@ -158,14 +153,12 @@ class ProductServiceTest {
         Product firstProduct = new Product(
                 seller,
                 "First Product",
-                new BigDecimal("10000.00"),
                 "First description",
                 null
         );
         Product secondProduct = new Product(
                 seller,
                 "Second Product",
-                new BigDecimal("20000.00"),
                 "Second description",
                 null
         );
@@ -193,7 +186,6 @@ class ProductServiceTest {
         Product product = new Product(
                 seller,
                 "Original Product",
-                new BigDecimal("30000.00"),
                 "Original description",
                 null
         );
@@ -201,7 +193,6 @@ class ProductServiceTest {
 
         ProductUpdateRequest request = new ProductUpdateRequest(
                 "Updated Product",
-                new BigDecimal("49000.00"),
                 "Updated description"
         );
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
@@ -209,10 +200,8 @@ class ProductServiceTest {
         ProductResponse response = productService.update(sellerId, productId, request);
 
         assertEquals("Updated Product", product.getName());
-        assertEquals(new BigDecimal("49000.00"), product.getPrice());
         assertEquals("Updated description", product.getDescription());
         assertEquals("Updated Product", response.getName());
-        assertEquals(new BigDecimal("49000.00"), response.getPrice());
         verify(productRepository).findById(productId);
         verify(productRepository, never()).save(any(Product.class));
     }
@@ -223,7 +212,6 @@ class ProductServiceTest {
         Long productId = 999L;
         ProductUpdateRequest request = new ProductUpdateRequest(
                 "Updated Product",
-                new BigDecimal("49000.00"),
                 null
         );
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
@@ -246,7 +234,6 @@ class ProductServiceTest {
         Product product = new Product(
                 owner,
                 "Original Product",
-                new BigDecimal("30000.00"),
                 "Original description",
                 null
         );
@@ -254,7 +241,6 @@ class ProductServiceTest {
 
         ProductUpdateRequest request = new ProductUpdateRequest(
                 "Updated Product",
-                new BigDecimal("49000.00"),
                 "Updated description"
         );
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
@@ -265,7 +251,6 @@ class ProductServiceTest {
         );
 
         assertEquals("Original Product", product.getName());
-        assertEquals(new BigDecimal("30000.00"), product.getPrice());
         assertEquals("Original description", product.getDescription());
     }
 
@@ -280,7 +265,6 @@ class ProductServiceTest {
         Product product = new Product(
                 seller,
                 "Product",
-                new BigDecimal("30000.00"),
                 null,
                 null
         );
@@ -318,7 +302,6 @@ class ProductServiceTest {
         Product product = new Product(
                 owner,
                 "Product",
-                new BigDecimal("30000.00"),
                 null,
                 null
         );
@@ -336,7 +319,6 @@ class ProductServiceTest {
     private ProductCreateRequest createRequest() {
         return new ProductCreateRequest(
                 "Product",
-                new BigDecimal("10000.00"),
                 "Description"
         );
     }
