@@ -12,11 +12,12 @@ import com.dropit.product.entity.Product;
 import com.dropit.product.exception.ProductErrorCode;
 import com.dropit.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -51,13 +52,10 @@ public class DropService {
     }
 
     @Transactional(readOnly = true)
-    public List<DropResponse> getAll() {
-        List<Drop> drops = dropRepository.findAll();
+    public Page<DropResponse> getAll(Pageable pageable) {
+        Page<Drop> drops = dropRepository.findAllByVisibleTrue(pageable);
 
-        return drops.stream()
-                .filter(Drop::isVisible)
-                .map(DropResponse::from)
-                .toList();
+        return drops.map(DropResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -70,6 +68,32 @@ public class DropService {
         }
 
         return DropResponse.from(drop);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<DropResponse> getPublicDropsBySeller(
+            Long sellerId,
+            Pageable pageable
+    ) {
+        Page<Drop> drops = dropRepository.findAllByProductSellerIdAndVisibleTrue(
+                sellerId,
+                pageable
+        );
+
+        return drops.map(DropResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<DropResponse> getDropsForSellerManagement(
+            Long sellerId,
+            Pageable pageable
+    ) {
+        Page<Drop> drops = dropRepository.findAllByProductSellerId(
+                sellerId,
+                pageable
+        );
+
+        return drops.map(DropResponse::from);
     }
 
     @Transactional
