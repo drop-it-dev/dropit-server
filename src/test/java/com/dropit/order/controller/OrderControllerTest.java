@@ -1,16 +1,21 @@
 package com.dropit.order.controller;
 
 import com.dropit.global.exception.GlobalExceptionHandler;
+import com.dropit.global.security.authentication.JwtAuthenticationToken;
+import com.dropit.global.security.principal.AuthUser;
 import com.dropit.order.dto.request.OrderCreateRequest;
 import com.dropit.order.dto.response.OrderResponse;
 import com.dropit.order.dto.response.OrderSummaryResponse;
 import com.dropit.order.entity.OrderStatus;
 import com.dropit.order.service.OrderService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -20,15 +25,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class OrderControllerTest {
 
@@ -41,7 +41,16 @@ class OrderControllerTest {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(new OrderController(orderService))
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new JwtAuthenticationToken(new AuthUser(1L), List.of())
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -57,7 +66,6 @@ class OrderControllerTest {
         when(orderService.create(eq(1L), any(OrderCreateRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/orders")
-                        .header("X-User-Id", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -83,7 +91,6 @@ class OrderControllerTest {
     @DisplayName("현재 MVP에서는 주문 항목을 두 개 이상 요청할 수 없다")
     void rejectMultipleOrderItems() throws Exception {
         mockMvc.perform(post("/orders")
-                        .header("X-User-Id", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -106,7 +113,7 @@ class OrderControllerTest {
                 new OrderSummaryResponse(1000L, OrderStatus.ORDERED, new BigDecimal("94400"), null)
         ));
 
-        mockMvc.perform(get("/orders/me").header("X-User-Id", 1L))
+        mockMvc.perform(get("/orders/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1000L))
                 .andExpect(jsonPath("$[0].status").value("ORDERED"));
@@ -119,7 +126,7 @@ class OrderControllerTest {
                 new OrderResponse(1000L, OrderStatus.ORDERED, new BigDecimal("94400"), null, List.of())
         );
 
-        mockMvc.perform(get("/orders/{orderId}", 1000L).header("X-User-Id", 1L))
+        mockMvc.perform(get("/orders/{orderId}", 1000L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1000L))
                 .andExpect(jsonPath("$.totalPrice").value(94400));
@@ -128,7 +135,7 @@ class OrderControllerTest {
     @Test
     @DisplayName("내 주문을 취소한다")
     void cancelOrder() throws Exception {
-        mockMvc.perform(post("/orders/{orderId}/cancel", 1000L).header("X-User-Id", 1L))
+        mockMvc.perform(post("/orders/{orderId}/cancel", 1000L))
                 .andExpect(status().isNoContent());
 
         verify(orderService).cancel(1L, 1000L);

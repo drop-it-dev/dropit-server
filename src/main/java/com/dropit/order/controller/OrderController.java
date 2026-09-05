@@ -1,5 +1,6 @@
 package com.dropit.order.controller;
 
+import com.dropit.global.security.principal.CurrentUserId;
 import com.dropit.order.dto.request.OrderCreateRequest;
 import com.dropit.order.dto.response.OrderResponse;
 import com.dropit.order.dto.response.OrderSummaryResponse;
@@ -7,12 +8,7 @@ import com.dropit.order.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
@@ -25,7 +21,7 @@ public class OrderController {
 
     @PostMapping("/orders")
     public ResponseEntity<OrderResponse> create(
-            @RequestHeader("X-User-Id") Long userId, // TODO: 인증 적용 후 SecurityContext에서 추출
+            @CurrentUserId Long userId,
             @Valid @RequestBody OrderCreateRequest request
     ) {
         OrderResponse response = orderService.create(userId, request);
@@ -37,14 +33,14 @@ public class OrderController {
 
     @GetMapping("/orders/me")
     public ResponseEntity<List<OrderSummaryResponse>> getMyOrders(
-            @RequestHeader("X-User-Id") Long userId // TODO: 인증 적용 후 SecurityContext에서 추출
+            @CurrentUserId Long userId
     ) {
         return ResponseEntity.ok(orderService.getMyOrders(userId));
     }
 
     @GetMapping("/orders/{orderId}")
     public ResponseEntity<OrderResponse> getMyOrder(
-            @RequestHeader("X-User-Id") Long userId, // TODO: 인증 적용 후 SecurityContext에서 추출
+            @CurrentUserId Long userId,
             @PathVariable Long orderId
     ) {
         return ResponseEntity.ok(orderService.getMyOrder(userId, orderId));
@@ -52,7 +48,7 @@ public class OrderController {
 
     @PostMapping("/orders/{orderId}/cancel")
     public ResponseEntity<Void> cancel(
-            @RequestHeader("X-User-Id") Long userId, // TODO: 인증 적용 후 SecurityContext에서 추출
+            @CurrentUserId Long userId,
             @PathVariable Long orderId
     ) {
         orderService.cancel(userId, orderId);
