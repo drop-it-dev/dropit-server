@@ -7,6 +7,8 @@ import com.dropit.user.entity.User;
 import com.dropit.user.exception.UserErrorCode;
 import com.dropit.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,12 +19,16 @@ import java.util.Objects;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public User findUser(Long userId) {
-        return userRepository.findById(userId)
+        return userRepository
+                .findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() ->
-                        new ServiceException(UserErrorCode.USER_NOT_FOUND)
+                        new ServiceException(
+                                UserErrorCode.USER_NOT_FOUND
+                        )
                 );
     }
 
@@ -67,22 +73,34 @@ public class UserService {
     ) {
         User user = findUser(userId);
 
-        if (!Objects.equals(
-                user.getPassword(),
-                request.currentPassword()
+        if (!passwordEncoder.matches(
+                request.currentPassword(),
+                user.getPassword()
         )) {
             throw new ServiceException(
                     UserErrorCode.INVALID_CURRENT_PASSWORD
             );
         }
 
-        user.updatePassword(request.newPassword());
+        user.updatePassword(
+                passwordEncoder.encode(
+                        request.newPassword()
+                )
+        );
     }
 
     @Transactional
     public void deleteUser(Long userId) {
+
         User user = findUser(userId);
 
-        userRepository.delete(user);
+        user.markDeleted();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public void deleteUserByAdmin(Long userId) {
+        User user = findUser(userId);
+        user.markDeleted();
     }
 }
