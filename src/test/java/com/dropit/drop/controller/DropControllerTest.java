@@ -123,6 +123,47 @@ class DropControllerTest {
     }
 
     @Test
+    @DisplayName("판매자별 공개 드랍 목록을 페이징하여 반환한다")
+    void getPublicDropsBySeller() throws Exception {
+        when(dropService.getPublicDropsBySeller(eq(10L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(
+                        List.of(response()),
+                        PageRequest.of(0, 20),
+                        1
+                ));
+
+        mockMvc.perform(get("/creators/10/drops")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(100L))
+                .andExpect(jsonPath("$.content[0].visible").value(true))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    @DisplayName("판매자 관리용 드랍 목록을 페이징하여 반환한다")
+    void getDropsForSellerManagement() throws Exception {
+        when(dropService.getDropsForSellerManagement(eq(10L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(
+                        List.of(response()),
+                        PageRequest.of(0, 20),
+                        1
+                ));
+
+        mockMvc.perform(get("/sellers/10/drops")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(100L))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
     @DisplayName("드랍 수정 요청 시 200 상태를 반환한다")
     void updateDrop() throws Exception {
         when(dropService.update(eq(1L), eq(100L), any())).thenReturn(response());

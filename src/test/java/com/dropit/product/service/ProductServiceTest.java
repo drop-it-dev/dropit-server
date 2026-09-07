@@ -182,6 +182,34 @@ class ProductServiceTest {
     }
 
     @Test
+    @DisplayName("판매자별 상품 목록을 페이징하여 조회한다")
+    void getProductsBySeller() {
+        Long sellerId = 1L;
+        User seller = createUser(UserRole.SELLER);
+        ReflectionTestUtils.setField(seller, "id", sellerId);
+
+        Product product = new Product(
+                seller,
+                "Seller Product",
+                "Seller product description",
+                null
+        );
+        ReflectionTestUtils.setField(product, "id", 100L);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        when(userRepository.findById(sellerId)).thenReturn(Optional.of(seller));
+        when(productRepository.findAllBySellerId(sellerId, pageable))
+                .thenReturn(new PageImpl<>(List.of(product), pageable, 1));
+
+        Page<ProductResponse> response = productService.getProductsBySeller(sellerId, pageable);
+
+        assertEquals(1, response.getTotalElements());
+        assertEquals(100L, response.getContent().get(0).getId());
+        assertEquals(sellerId, response.getContent().get(0).getSellerId());
+        verify(productRepository).findAllBySellerId(sellerId, pageable);
+    }
+
+    @Test
     @DisplayName("상품 소유자는 상품 정보를 수정할 수 있다")
     void updateProduct() {
         Long sellerId = 1L;

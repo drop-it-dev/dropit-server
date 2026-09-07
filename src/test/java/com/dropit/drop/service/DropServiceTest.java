@@ -159,6 +159,51 @@ class DropServiceTest {
     }
 
     @Test
+    @DisplayName("판매자별 공개 드랍 목록을 페이징하여 조회한다")
+    void getPublicDropsBySeller() {
+        Long sellerId = 1L;
+        Drop drop = saveDrop(sellerId, 10L, 100L, LocalDateTime.now().plusDays(1));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(dropRepository.findAllByProductSellerIdAndVisibleTrue(sellerId, pageable))
+                .thenReturn(new PageImpl<>(List.of(drop), pageable, 1));
+
+        Page<DropResponse> responses = dropService.getPublicDropsBySeller(sellerId, pageable);
+
+        assertEquals(1, responses.getTotalElements());
+        assertEquals(100L, responses.getContent().get(0).id());
+        assertEquals(sellerId, responses.getContent().get(0).sellerId());
+        verify(dropRepository).findAllByProductSellerIdAndVisibleTrue(sellerId, pageable);
+    }
+
+    @Test
+    @DisplayName("판매자 관리용 드랍 목록을 페이징하여 조회한다")
+    void getDropsForSellerManagement() {
+        Long sellerId = 1L;
+        Product product = saveProduct(sellerId, 10L);
+        Drop hiddenDrop = new Drop(
+                product,
+                new BigDecimal("59000"),
+                10,
+                20,
+                2,
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(2)
+        );
+        ReflectionTestUtils.setField(hiddenDrop, "id", 100L);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        when(dropRepository.findAllByProductSellerId(sellerId, pageable))
+                .thenReturn(new PageImpl<>(List.of(hiddenDrop), pageable, 1));
+
+        Page<DropResponse> responses = dropService.getDropsForSellerManagement(sellerId, pageable);
+
+        assertEquals(1, responses.getTotalElements());
+        assertEquals(100L, responses.getContent().get(0).id());
+        assertEquals(false, responses.getContent().get(0).visible());
+        verify(dropRepository).findAllByProductSellerId(sellerId, pageable);
+    }
+
+    @Test
     @DisplayName("비공개 드랍 상세 조회는 존재하지 않는 드랍으로 처리한다")
     void rejectHiddenDropFromPublicDetail() {
         Product product = saveProduct(1L, 10L);

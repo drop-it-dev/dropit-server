@@ -221,6 +221,45 @@ class ProductControllerTest {
     }
 
     @Test
+    @DisplayName("판매자별 상품 목록을 페이징하여 반환한다")
+    void getProductsBySeller() throws Exception {
+        User seller = new User(
+                "seller@example.com",
+                "encoded-password",
+                "seller",
+                UserRole.SELLER
+        );
+        ReflectionTestUtils.setField(seller, "id", 1L);
+
+        Product product = new Product(
+                seller,
+                "Seller Product",
+                "Seller product description",
+                null
+        );
+        ReflectionTestUtils.setField(product, "id", 100L);
+
+        when(productService.getProductsBySeller(eq(1L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(
+                        List.of(new ProductResponse(product)),
+                        PageRequest.of(0, 20),
+                        1
+                ));
+
+        mockMvc.perform(get("/sellers/1/products")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(100L))
+                .andExpect(jsonPath("$.content[0].sellerId").value(1L))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        verify(productService).getProductsBySeller(eq(1L), any(Pageable.class));
+    }
+
+    @Test
     @DisplayName("상품을 수정하면 200 상태와 수정된 상품 정보를 반환한다")
     void updateProduct() throws Exception {
         Long sellerId = 1L;
