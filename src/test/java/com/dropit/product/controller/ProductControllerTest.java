@@ -2,6 +2,8 @@ package com.dropit.product.controller;
 
 import com.dropit.global.exception.GlobalExceptionHandler;
 import com.dropit.global.exception.ServiceException;
+import com.dropit.global.security.authentication.JwtAuthenticationToken;
+import com.dropit.global.security.principal.AuthUser;
 import com.dropit.product.dto.request.ProductCreateRequest;
 import com.dropit.product.dto.request.ProductUpdateRequest;
 import com.dropit.product.dto.response.ProductResponse;
@@ -11,6 +13,7 @@ import com.dropit.product.service.ProductService;
 import com.dropit.user.entity.User;
 import com.dropit.user.entity.UserRole;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -18,6 +21,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -53,8 +59,17 @@ class ProductControllerTest {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(productController)
                 .setControllerAdvice(new GlobalExceptionHandler())
-                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setCustomArgumentResolvers(
+                        new PageableHandlerMethodArgumentResolver(),
+                        new AuthenticationPrincipalArgumentResolver()
+                )
                 .build();
+        authenticate(1L);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -65,7 +80,6 @@ class ProductControllerTest {
                 .thenReturn(100L);
 
         mockMvc.perform(post("/products")
-                        .param("sellerId", sellerId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -87,9 +101,13 @@ class ProductControllerTest {
     }
 
     @Test
-    @DisplayName("판매자 ID가 없으면 400 상태를 반환한다")
-    void rejectMissingSellerId() throws Exception {
+    @DisplayName("요청 파라미터가 아니라 로그인 사용자의 ID로 상품을 등록한다")
+    void useAuthenticatedSellerId() throws Exception {
+        when(productService.create(eq(1L), any(ProductCreateRequest.class)))
+                .thenReturn(100L);
+
         mockMvc.perform(post("/products")
+                        .param("sellerId", "999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -97,16 +115,15 @@ class ProductControllerTest {
                                   "description": "Description"
                                 }
                                 """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isCreated());
 
-        verifyNoInteractions(productService);
+        verify(productService).create(eq(1L), any(ProductCreateRequest.class));
     }
 
     @Test
     @DisplayName("상품명이 공백이면 400 상태를 반환한다")
     void rejectBlankName() throws Exception {
         mockMvc.perform(post("/products")
-                        .param("sellerId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -123,7 +140,6 @@ class ProductControllerTest {
     @DisplayName("요청 본문이 없으면 400 상태를 반환한다")
     void rejectMissingBody() throws Exception {
         mockMvc.perform(post("/products")
-                        .param("sellerId", "1")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
 
@@ -133,11 +149,11 @@ class ProductControllerTest {
     @Test
     @DisplayName("존재하지 않는 판매자로 상품을 등록하면 404 오류 응답을 반환한다")
     void rejectMissingSeller() throws Exception {
+        authenticate(999L);
         when(productService.create(eq(999L), any(ProductCreateRequest.class)))
                 .thenThrow(new ServiceException(ProductErrorCode.SELLER_NOT_FOUND));
 
         mockMvc.perform(post("/products")
-                        .param("sellerId", "999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -157,7 +173,6 @@ class ProductControllerTest {
                 .thenThrow(new ServiceException(ProductErrorCode.SELLER_ROLE_REQUIRED));
 
         mockMvc.perform(post("/products")
-                        .param("sellerId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -284,7 +299,6 @@ class ProductControllerTest {
                 .thenReturn(new ProductResponse(product));
 
         mockMvc.perform(put("/products/{productId}", productId)
-                        .param("sellerId", sellerId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -312,7 +326,6 @@ class ProductControllerTest {
     @DisplayName("상품 수정 요청의 상품명이 공백이면 400 상태를 반환한다")
     void rejectUpdatingWithBlankName() throws Exception {
         mockMvc.perform(put("/products/{productId}", 100L)
-                        .param("sellerId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -328,11 +341,11 @@ class ProductControllerTest {
     @Test
     @DisplayName("상품 소유자가 아니면 수정 시 403 오류 응답을 반환한다")
     void rejectUpdatingAnotherSellersProduct() throws Exception {
+        authenticate(2L);
         when(productService.update(eq(2L), eq(100L), any(ProductUpdateRequest.class)))
                 .thenThrow(new ServiceException(ProductErrorCode.PRODUCT_OWNER_REQUIRED));
 
         mockMvc.perform(put("/products/{productId}", 100L)
-                        .param("sellerId", "2")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -351,11 +364,18 @@ class ProductControllerTest {
         Long sellerId = 1L;
         Long productId = 100L;
 
-        mockMvc.perform(delete("/products/{productId}", productId)
-                        .param("sellerId", sellerId.toString()))
+        mockMvc.perform(delete("/products/{productId}", productId))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
         verify(productService).delete(sellerId, productId);
+    }
+
+    private void authenticate(Long userId) {
+        JwtAuthenticationToken authentication = new JwtAuthenticationToken(
+                new AuthUser(userId),
+                List.of(new SimpleGrantedAuthority("ROLE_SELLER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }

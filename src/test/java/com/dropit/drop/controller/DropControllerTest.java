@@ -5,6 +5,9 @@ import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.entity.DropStatus;
 import com.dropit.drop.service.DropService;
 import com.dropit.global.exception.GlobalExceptionHandler;
+import com.dropit.global.security.authentication.JwtAuthenticationToken;
+import com.dropit.global.security.principal.AuthUser;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +18,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -46,9 +52,18 @@ class DropControllerTest {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(new DropController(dropService))
                 .setControllerAdvice(new GlobalExceptionHandler())
-                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setCustomArgumentResolvers(
+                        new PageableHandlerMethodArgumentResolver(),
+                        new AuthenticationPrincipalArgumentResolver()
+                )
                 .setValidator(validator)
                 .build();
+        authenticate(1L);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -57,7 +72,6 @@ class DropControllerTest {
         when(dropService.save(eq(1L), any())).thenReturn(100L);
 
         mockMvc.perform(post("/drops")
-                        .queryParam("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -79,7 +93,6 @@ class DropControllerTest {
     @DisplayName("유효하지 않은 드랍 생성 요청은 400 오류를 반환한다")
     void rejectInvalidCreateRequest() throws Exception {
         mockMvc.perform(post("/drops")
-                        .queryParam("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -146,6 +159,7 @@ class DropControllerTest {
     @Test
     @DisplayName("판매자 관리용 드랍 목록을 페이징하여 반환한다")
     void getDropsForSellerManagement() throws Exception {
+        authenticate(10L);
         when(dropService.getDropsForSellerManagement(eq(10L), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(
                         List.of(response()),
@@ -153,7 +167,7 @@ class DropControllerTest {
                         1
                 ));
 
-        mockMvc.perform(get("/sellers/10/drops")
+        mockMvc.perform(get("/users/me/drops")
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
@@ -169,7 +183,6 @@ class DropControllerTest {
         when(dropService.update(eq(1L), eq(100L), any())).thenReturn(response());
 
         mockMvc.perform(patch("/drops/100")
-                        .queryParam("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -191,7 +204,6 @@ class DropControllerTest {
         when(dropService.changeVisibility(eq(1L), eq(100L), any())).thenReturn(response());
 
         mockMvc.perform(patch("/drops/100/visibility")
-                        .queryParam("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -205,7 +217,7 @@ class DropControllerTest {
     @Test
     @DisplayName("드랍 삭제 요청 시 204 상태를 반환한다")
     void deleteDrop() throws Exception {
-        mockMvc.perform(delete("/drops/100").queryParam("userId", "1"))
+        mockMvc.perform(delete("/drops/100"))
                 .andExpect(status().isNoContent());
     }
 
@@ -213,7 +225,6 @@ class DropControllerTest {
     @DisplayName("공개 여부가 없는 변경 요청은 400 오류를 반환한다")
     void rejectVisibilityRequestWithoutVisible() throws Exception {
         mockMvc.perform(patch("/drops/100/visibility")
-                        .queryParam("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
@@ -241,5 +252,13 @@ class DropControllerTest {
                 openAt.plusDays(1),
                 DropStatus.READY
         );
+    }
+
+    private void authenticate(Long userId) {
+        JwtAuthenticationToken authentication = new JwtAuthenticationToken(
+                new AuthUser(userId),
+                List.of(new SimpleGrantedAuthority("ROLE_SELLER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }
