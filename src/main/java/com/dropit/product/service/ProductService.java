@@ -1,5 +1,6 @@
 package com.dropit.product.service;
 
+import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.product.dto.request.ProductCreateRequest;
 import com.dropit.product.dto.request.ProductUpdateRequest;
@@ -22,6 +23,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final DropRepository dropRepository;
 
     @Transactional
     public Long create(Long sellerId, ProductCreateRequest request) {
@@ -101,6 +103,10 @@ public class ProductService {
 
         if (!product.getSeller().getId().equals(sellerId)) {
             throw new ServiceException(ProductErrorCode.PRODUCT_OWNER_REQUIRED);
+        }
+
+        if (dropRepository.existsByProductId(productId)) {
+            throw new ServiceException(ProductErrorCode.PRODUCT_IN_USE_BY_DROP);
         }
 
         productRepository.delete(product);

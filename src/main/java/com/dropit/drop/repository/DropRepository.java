@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DropRepository extends JpaRepository<Drop, Long>, DropRepositoryCustom {
 
+    boolean existsByProductId(Long productId);
+
     Page<Drop> findAllByVisibleTrue(Pageable pageable);
 
     Page<Drop> findAllByProductSellerIdAndVisibleTrue(
