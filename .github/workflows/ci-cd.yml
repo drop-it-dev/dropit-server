@@ -72,7 +72,6 @@ jobs:
 
           # Docker 빌드 및 push
           docker build -t $IMAGE_URI:$SHORT_SHA .
-#          docker build --platform linux/arm64 -t $IMAGE_URI:$SHORT_SHA .
           docker push $IMAGE_URI:$SHORT_SHA
 
           echo "✅ Pushed: $IMAGE_URI:$SHORT_SHA"
