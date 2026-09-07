@@ -2,23 +2,29 @@ package com.dropit.sellerprofile.controller;
 
 import com.dropit.global.exception.GlobalExceptionHandler;
 import com.dropit.global.exception.ServiceException;
+import com.dropit.global.security.authentication.JwtAuthenticationToken;
+import com.dropit.global.security.principal.AuthUser;
 import com.dropit.sellerprofile.dto.request.SellerProfileCreateRequest;
 import com.dropit.sellerprofile.dto.request.SellerProfileUpdateRequest;
 import com.dropit.sellerprofile.dto.response.SellerProfileResponse;
 import com.dropit.sellerprofile.exception.SellerProfileErrorCode;
 import com.dropit.sellerprofile.service.SellerProfileService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -41,7 +47,17 @@ class SellerProfileControllerTest {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new JwtAuthenticationToken(new AuthUser(1L), List.of())
+        );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -54,7 +70,6 @@ class SellerProfileControllerTest {
                 .thenReturn(response);
 
         mockMvc.perform(post("/seller-profiles")
-                        .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -68,28 +83,12 @@ class SellerProfileControllerTest {
     }
 
     @Test
-    @DisplayName("사용자 ID 헤더가 없으면 400 상태를 반환한다")
-    void rejectMissingUserId() throws Exception {
-        mockMvc.perform(post("/seller-profiles")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "description": "판매자 소개"
-                                }
-                                """))
-                .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(sellerProfileService);
-    }
-
-    @Test
     @DisplayName("일반 사용자는 프로필 등록 시 403 오류 응답을 반환한다")
     void rejectNonSeller() throws Exception {
         when(sellerProfileService.create(eq(1L), any(SellerProfileCreateRequest.class)))
                 .thenThrow(new ServiceException(SellerProfileErrorCode.SELLER_ROLE_REQUIRED));
 
         mockMvc.perform(post("/seller-profiles")
-                        .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -108,7 +107,6 @@ class SellerProfileControllerTest {
                         SellerProfileErrorCode.SELLER_PROFILE_ALREADY_EXISTS));
 
         mockMvc.perform(post("/seller-profiles")
-                        .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -126,8 +124,7 @@ class SellerProfileControllerTest {
                 .thenReturn(new SellerProfileResponse(
                         100L, 1L, "판매자 소개", null, null, null));
 
-        mockMvc.perform(get("/seller-profiles/me")
-                        .header("X-User-Id", "1"))
+        mockMvc.perform(get("/seller-profiles/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(100L));
     }
@@ -152,7 +149,6 @@ class SellerProfileControllerTest {
                         100L, 1L, "수정된 소개", null, null, null));
 
         mockMvc.perform(patch("/seller-profiles/me")
-                        .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -166,8 +162,7 @@ class SellerProfileControllerTest {
     @Test
     @DisplayName("판매자 프로필을 삭제하면 204 상태를 반환한다")
     void deleteProfile() throws Exception {
-        mockMvc.perform(delete("/seller-profiles/me")
-                        .header("X-User-Id", "1"))
+        mockMvc.perform(delete("/seller-profiles/me"))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
