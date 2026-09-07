@@ -70,4 +70,48 @@ class DropTest {
 
         assertEquals(DropErrorCode.INVALID_DROP_PERIOD, exception.getErrorCode());
     }
+
+    @Test
+    @DisplayName("판매 중인 공개 드랍의 재고를 차감하고 취소 시 복구할 수 있다")
+    void decreaseAndRestoreStock() {
+        LocalDateTime now = LocalDateTime.of(2026, 9, 2, 12, 0);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 0, now.minusHours(1), now.plusHours(1));
+        drop.changeVisibility(true);
+
+        drop.decreaseStock(2, now);
+        assertEquals(8, drop.getRemainingQuantity());
+
+        drop.restoreStock(2);
+        assertEquals(10, drop.getRemainingQuantity());
+    }
+
+    @Test
+    @DisplayName("드랍 재고보다 많은 수량을 주문할 수 없다")
+    void rejectQuantityExceedingStock() {
+        LocalDateTime now = LocalDateTime.of(2026, 9, 2, 12, 0);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 1, 20, 0, now.minusHours(1), now.plusHours(1));
+        drop.changeVisibility(true);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> drop.decreaseStock(2, now)
+        );
+
+        assertEquals(DropErrorCode.INSUFFICIENT_STOCK, exception.getErrorCode());
+        assertEquals(1, drop.getRemainingQuantity());
+    }
+
+    @Test
+    @DisplayName("비공개 드랍은 판매 기간이어도 주문할 수 없다")
+    void rejectHiddenDropPurchase() {
+        LocalDateTime now = LocalDateTime.of(2026, 9, 2, 12, 0);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 0, now.minusHours(1), now.plusHours(1));
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> drop.decreaseStock(1, now)
+        );
+
+        assertEquals(DropErrorCode.DROP_NOT_OPEN, exception.getErrorCode());
+    }
 }

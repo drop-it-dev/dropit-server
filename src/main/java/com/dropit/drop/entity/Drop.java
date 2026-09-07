@@ -119,4 +119,19 @@ public class Drop extends BaseEntity {
     public void changeVisibility(boolean visible) {
         this.visible = visible;
     }
+
+    public void decreaseStock(int quantity, LocalDateTime now) {
+        if (!visible || currentStatus(now) != DropStatus.OPEN) {
+            throw new ServiceException(DropErrorCode.DROP_NOT_OPEN);
+        }
+        if (remainingQuantity < quantity) {
+            throw new ServiceException(DropErrorCode.INSUFFICIENT_STOCK);
+        }
+
+        this.remainingQuantity -= quantity;
+    }
+
+    public void restoreStock(int quantity) {
+        this.remainingQuantity += quantity;
+    }
 }
