@@ -1,6 +1,7 @@
 package com.dropit.drop.service;
 
 import com.dropit.drop.dto.request.DropCreateRequest;
+import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
 import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
@@ -20,6 +21,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
@@ -115,13 +120,16 @@ class DropServiceTest {
     void getAllDrops() {
         Drop first = saveDrop(1L, 10L, 100L, LocalDateTime.now().plusDays(1));
         Drop second = saveDrop(1L, 11L, 101L, LocalDateTime.now().plusDays(2));
-        when(dropRepository.findAll()).thenReturn(List.of(first, second));
+        DropSearchCondition condition = new DropSearchCondition(null, null, null);
+        Pageable pageable = PageRequest.of(0, 20);
+        when(dropRepository.searchPublicDrops(condition, pageable))
+                .thenReturn(new PageImpl<>(List.of(first, second), pageable, 2));
 
-        List<DropResponse> responses = dropService.getAll();
+        Page<DropResponse> responses = dropService.getAll(condition, pageable);
 
-        assertEquals(2, responses.size());
-        assertEquals(100L, responses.get(0).id());
-        assertEquals(101L, responses.get(1).id());
+        assertEquals(2, responses.getTotalElements());
+        assertEquals(100L, responses.getContent().get(0).id());
+        assertEquals(101L, responses.getContent().get(1).id());
     }
 
     @Test
@@ -139,12 +147,60 @@ class DropServiceTest {
                 LocalDateTime.now().plusDays(2)
         );
         ReflectionTestUtils.setField(hiddenDrop, "id", 101L);
-        when(dropRepository.findAll()).thenReturn(List.of(visibleDrop, hiddenDrop));
+        DropSearchCondition condition = new DropSearchCondition(null, null, null);
+        Pageable pageable = PageRequest.of(0, 20);
+        when(dropRepository.searchPublicDrops(condition, pageable))
+                .thenReturn(new PageImpl<>(List.of(visibleDrop), pageable, 1));
 
-        List<DropResponse> responses = dropService.getAll();
+        Page<DropResponse> responses = dropService.getAll(condition, pageable);
 
-        assertEquals(1, responses.size());
-        assertEquals(100L, responses.get(0).id());
+        assertEquals(1, responses.getTotalElements());
+        assertEquals(100L, responses.getContent().get(0).id());
+    }
+
+    @Test
+    @DisplayName("판매자별 공개 드랍 목록을 페이징하여 조회한다")
+    void getPublicDropsBySeller() {
+        Long sellerId = 1L;
+        Drop drop = saveDrop(sellerId, 10L, 100L, LocalDateTime.now().plusDays(1));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(dropRepository.findAllByProductSellerIdAndVisibleTrue(sellerId, pageable))
+                .thenReturn(new PageImpl<>(List.of(drop), pageable, 1));
+
+        Page<DropResponse> responses = dropService.getPublicDropsBySeller(sellerId, pageable);
+
+        assertEquals(1, responses.getTotalElements());
+        assertEquals(100L, responses.getContent().get(0).id());
+        assertEquals(sellerId, responses.getContent().get(0).sellerId());
+        verify(dropRepository).findAllByProductSellerIdAndVisibleTrue(sellerId, pageable);
+    }
+
+    @Test
+    @DisplayName("판매자 관리용 드랍 목록을 페이징하여 조회한다")
+    void getDropsForSellerManagement() {
+        Long sellerId = 1L;
+        Product product = saveProduct(sellerId, 10L);
+        Drop hiddenDrop = new Drop(
+                product,
+                new BigDecimal("59000"),
+                10,
+                20,
+                2,
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(2)
+        );
+        ReflectionTestUtils.setField(hiddenDrop, "id", 100L);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        when(dropRepository.findAllByProductSellerId(sellerId, pageable))
+                .thenReturn(new PageImpl<>(List.of(hiddenDrop), pageable, 1));
+
+        Page<DropResponse> responses = dropService.getDropsForSellerManagement(sellerId, pageable);
+
+        assertEquals(1, responses.getTotalElements());
+        assertEquals(100L, responses.getContent().get(0).id());
+        assertEquals(false, responses.getContent().get(0).visible());
+        verify(dropRepository).findAllByProductSellerId(sellerId, pageable);
     }
 
     @Test

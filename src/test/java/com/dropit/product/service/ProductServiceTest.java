@@ -18,6 +18,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -165,14 +169,44 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(firstProduct, "id", 1L);
         ReflectionTestUtils.setField(secondProduct, "id", 2L);
 
-        when(productRepository.findAll()).thenReturn(List.of(firstProduct, secondProduct));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(productRepository.findAll(pageable))
+                .thenReturn(new PageImpl<>(List.of(firstProduct, secondProduct), pageable, 2));
 
-        List<ProductResponse> response = productService.getProducts();
+        Page<ProductResponse> response = productService.getProducts(pageable);
 
-        assertEquals(2, response.size());
-        assertEquals("First Product", response.get(0).getName());
-        assertEquals("Second Product", response.get(1).getName());
-        verify(productRepository).findAll();
+        assertEquals(2, response.getTotalElements());
+        assertEquals("First Product", response.getContent().get(0).getName());
+        assertEquals("Second Product", response.getContent().get(1).getName());
+        verify(productRepository).findAll(pageable);
+    }
+
+    @Test
+    @DisplayName("판매자별 상품 목록을 페이징하여 조회한다")
+    void getProductsBySeller() {
+        Long sellerId = 1L;
+        User seller = createUser(UserRole.SELLER);
+        ReflectionTestUtils.setField(seller, "id", sellerId);
+
+        Product product = new Product(
+                seller,
+                "Seller Product",
+                "Seller product description",
+                null
+        );
+        ReflectionTestUtils.setField(product, "id", 100L);
+
+        Pageable pageable = PageRequest.of(0, 20);
+        when(userRepository.findById(sellerId)).thenReturn(Optional.of(seller));
+        when(productRepository.findAllBySellerId(sellerId, pageable))
+                .thenReturn(new PageImpl<>(List.of(product), pageable, 1));
+
+        Page<ProductResponse> response = productService.getProductsBySeller(sellerId, pageable);
+
+        assertEquals(1, response.getTotalElements());
+        assertEquals(100L, response.getContent().get(0).getId());
+        assertEquals(sellerId, response.getContent().get(0).getSellerId());
+        verify(productRepository).findAllBySellerId(sellerId, pageable);
     }
 
     @Test

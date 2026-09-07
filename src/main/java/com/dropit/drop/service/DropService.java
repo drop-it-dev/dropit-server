@@ -1,6 +1,7 @@
 package com.dropit.drop.service;
 
 import com.dropit.drop.dto.request.DropCreateRequest;
+import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
 import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
@@ -52,8 +53,11 @@ public class DropService {
     }
 
     @Transactional(readOnly = true)
-    public Page<DropResponse> getAll(Pageable pageable) {
-        Page<Drop> drops = dropRepository.findAllByVisibleTrue(pageable);
+    public Page<DropResponse> getAll(
+            DropSearchCondition condition,
+            Pageable pageable
+    ) {
+        Page<Drop> drops = dropRepository.searchPublicDrops(condition, pageable);
 
         return drops.map(DropResponse::from);
     }

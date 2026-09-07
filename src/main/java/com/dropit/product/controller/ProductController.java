@@ -1,5 +1,6 @@
 package com.dropit.product.controller;
 
+import com.dropit.global.security.principal.CurrentUserId;
 import com.dropit.product.dto.request.ProductCreateRequest;
 import com.dropit.product.dto.request.ProductUpdateRequest;
 import com.dropit.product.dto.response.ProductResponse;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
@@ -29,7 +29,7 @@ public class ProductController {
 
     @PostMapping("/products")
     public ResponseEntity<Long> create(
-            @RequestParam Long sellerId,
+            @CurrentUserId Long sellerId,
             @Valid @RequestBody ProductCreateRequest request
     ) {
         Long productId = productService.create(sellerId, request);
@@ -69,7 +69,7 @@ public class ProductController {
 
     @PutMapping("/products/{productId}")
     public ResponseEntity<ProductResponse> update(
-            @RequestParam Long sellerId,
+            @CurrentUserId Long sellerId,
             @PathVariable Long productId,
             @Valid @RequestBody ProductUpdateRequest request
     ) {
@@ -80,7 +80,7 @@ public class ProductController {
 
     @DeleteMapping("/products/{productId}")
     public ResponseEntity<Void> delete(
-            @RequestParam Long sellerId,
+            @CurrentUserId Long sellerId,
             @PathVariable Long productId
     ) {
         productService.delete(sellerId, productId);

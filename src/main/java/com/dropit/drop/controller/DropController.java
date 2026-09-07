@@ -1,10 +1,12 @@
 package com.dropit.drop.controller;
 
 import com.dropit.drop.dto.request.DropCreateRequest;
+import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
 import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.service.DropService;
+import com.dropit.global.security.principal.CurrentUserId;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,10 +26,10 @@ public class DropController {
 
     @PostMapping("/drops")
     public ResponseEntity<Long> create(
-            @RequestParam Long userId, // TODO: 인증 기능 적용 후 SecurityContext의 로그인 사용자 정보에서 추출
+            @CurrentUserId Long sellerId,
             @Valid @RequestBody DropCreateRequest request
     ) {
-        Long dropId = dropService.save(userId, request);
+        Long dropId = dropService.save(sellerId, request);
 
         return ResponseEntity
                 .created(URI.create("/drops/" + dropId))
@@ -36,13 +38,10 @@ public class DropController {
 
     @GetMapping("/drops")
     public ResponseEntity<Page<DropResponse>> getAll(
-            @PageableDefault(
-                    size = 20,
-                    sort = "createdAt",
-                    direction = Sort.Direction.DESC
-            ) Pageable pageable
+            @ModelAttribute DropSearchCondition condition,
+            @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<DropResponse> response = dropService.getAll(pageable);
+        Page<DropResponse> response = dropService.getAll(condition, pageable);
 
         return ResponseEntity.ok(response);
     }
@@ -71,9 +70,9 @@ public class DropController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/sellers/{sellerId}/drops")
+    @GetMapping("/users/me/drops")
     public ResponseEntity<Page<DropResponse>> getDropsForSellerManagement(
-            @PathVariable Long sellerId, // TODO: 인증 기능 적용 후 로그인 사용자 ID로 교체
+            @CurrentUserId Long sellerId,
             @PageableDefault(
                     size = 20,
                     sort = "createdAt",
@@ -90,28 +89,28 @@ public class DropController {
 
     @PatchMapping("/drops/{dropId}")
     public ResponseEntity<DropResponse> update(
-            @RequestParam Long userId, // TODO: 인증 기능 적용 후 SecurityContext의 로그인 사용자 정보에서 추출
+            @CurrentUserId Long sellerId,
             @PathVariable Long dropId,
             @Valid @RequestBody DropUpdateRequest request
     ) {
-        return ResponseEntity.ok(dropService.update(userId, dropId, request));
+        return ResponseEntity.ok(dropService.update(sellerId, dropId, request));
     }
 
     @PatchMapping("/drops/{dropId}/visibility")
     public ResponseEntity<DropResponse> changeVisibility(
-            @RequestParam Long userId, // TODO: 인증 기능 적용 후 SecurityContext의 로그인 사용자 정보에서 추출
+            @CurrentUserId Long sellerId,
             @PathVariable Long dropId,
             @Valid @RequestBody DropVisibilityUpdateRequest request
     ) {
-        return ResponseEntity.ok(dropService.changeVisibility(userId, dropId, request));
+        return ResponseEntity.ok(dropService.changeVisibility(sellerId, dropId, request));
     }
 
     @DeleteMapping("/drops/{dropId}")
     public ResponseEntity<Void> delete(
-            @RequestParam Long userId, // TODO: 인증 기능 적용 후 SecurityContext의 로그인 사용자 정보에서 추출
+            @CurrentUserId Long sellerId,
             @PathVariable Long dropId
     ) {
-        dropService.delete(userId, dropId);
+        dropService.delete(sellerId, dropId);
 
         return ResponseEntity.noContent().build();
     }
