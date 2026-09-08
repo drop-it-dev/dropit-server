@@ -20,7 +20,6 @@ class SellerProfileCreateRequestTest {
     void acceptValidRequest() {
         SellerProfileCreateRequest request = new SellerProfileCreateRequest(
                 "판매자 소개",
-                "https://example.com/profile.png",
                 "https://instagram.com/example",
                 "https://youtube.com/@example"
         );
@@ -32,20 +31,20 @@ class SellerProfileCreateRequestTest {
     @DisplayName("소개는 2000자를 초과할 수 없다")
     void rejectTooLongDescription() {
         SellerProfileCreateRequest request = new SellerProfileCreateRequest(
-                "a".repeat(2001), null, null, null
+                "a".repeat(2001), null, null
         );
 
         assertViolationCount(request, "description", 1);
     }
 
     @Test
-    @DisplayName("URL은 2048자를 초과할 수 없다")
-    void rejectTooLongUrl() {
+    @DisplayName("인스타그램 URL은 2048자를 초과할 수 없다")
+    void rejectTooLongInstagramUrl() {
         SellerProfileCreateRequest request = new SellerProfileCreateRequest(
-                null, "a".repeat(2049), null, null
+                null, "a".repeat(2049), null
         );
 
-        assertViolationCount(request, "imageUrl", 1);
+        assertViolationCount(request, "instagramUrl", 1);
     }
 
     private void assertViolationCount(

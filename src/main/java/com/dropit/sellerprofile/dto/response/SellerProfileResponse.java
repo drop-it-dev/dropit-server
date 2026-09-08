@@ -11,12 +11,15 @@ public record SellerProfileResponse(
         String youtubeUrl
 ) {
 
-    public static SellerProfileResponse from(SellerProfile sellerProfile) {
+    public static SellerProfileResponse from(
+            SellerProfile sellerProfile,
+            String imageUrl
+    ) {
         return new SellerProfileResponse(
                 sellerProfile.getId(),
                 sellerProfile.getUser().getId(),
                 sellerProfile.getDescription(),
-                sellerProfile.getImageUrl(),
+                imageUrl,
                 sellerProfile.getInstagramUrl(),
                 sellerProfile.getYoutubeUrl()
         );
