@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.dropit.global.security.principal.CurrentUserId;
 
 @RestController
 @RequiredArgsConstructor
@@ -27,7 +27,7 @@ public class SellerProfileController {
 
     @PostMapping
     public ResponseEntity<SellerProfileResponse> create(
-            @RequestHeader("X-User-Id") Long userId,
+            @CurrentUserId Long userId,
             @Valid @RequestBody SellerProfileCreateRequest request
     ) {
         SellerProfileResponse response = sellerProfileService.create(userId, request);
@@ -37,7 +37,7 @@ public class SellerProfileController {
 
     @GetMapping("/me")
     public ResponseEntity<SellerProfileResponse> getMine(
-            @RequestHeader("X-User-Id") Long userId
+            @CurrentUserId Long userId
     ) {
         return ResponseEntity.ok(sellerProfileService.getMine(userId));
     }
@@ -51,7 +51,7 @@ public class SellerProfileController {
 
     @PatchMapping("/me")
     public ResponseEntity<SellerProfileResponse> update(
-            @RequestHeader("X-User-Id") Long userId,
+            @CurrentUserId Long userId,
             @Valid @RequestBody SellerProfileUpdateRequest request
     ) {
         return ResponseEntity.ok(sellerProfileService.update(userId, request));
@@ -59,7 +59,7 @@ public class SellerProfileController {
 
     @DeleteMapping("/me")
     public ResponseEntity<Void> delete(
-            @RequestHeader("X-User-Id") Long userId
+            @CurrentUserId Long userId
     ) {
         sellerProfileService.delete(userId);
 

@@ -50,6 +50,7 @@ public class SecurityConfig {
                                 errorResponseSender.send(response, JwtErrorCode.JWT_ACCESS_DENIED))
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login", "/auth/reissue").permitAll()
                         .anyRequest().authenticated()
                 )
