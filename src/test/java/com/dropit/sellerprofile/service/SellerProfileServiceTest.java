@@ -1,6 +1,7 @@
 package com.dropit.sellerprofile.service;
 
 import com.dropit.global.exception.ServiceException;
+import com.dropit.global.storage.S3ImageService;
 import com.dropit.sellerprofile.dto.request.SellerProfileCreateRequest;
 import com.dropit.sellerprofile.dto.request.SellerProfileUpdateRequest;
 import com.dropit.sellerprofile.dto.response.SellerProfileResponse;
@@ -18,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.Optional;
 
@@ -33,6 +35,7 @@ class SellerProfileServiceTest {
 
     @Mock SellerProfileRepository sellerProfileRepository;
     @Mock UserRepository userRepository;
+    @Mock S3ImageService s3ImageService;
     @InjectMocks SellerProfileService sellerProfileService;
 
     @Test
@@ -150,7 +153,7 @@ class SellerProfileServiceTest {
         when(sellerProfileRepository.findByUser_Id(1L)).thenReturn(Optional.of(profile));
 
         SellerProfileUpdateRequest request = new SellerProfileUpdateRequest(
-                "수정된 소개", "updated-image", "updated-instagram", "updated-youtube"
+                "수정된 소개", "updated-instagram", "updated-youtube"
         );
 
         SellerProfileResponse response = sellerProfileService.update(1L, request);
@@ -158,6 +161,31 @@ class SellerProfileServiceTest {
         assertEquals("수정된 소개", profile.getDescription());
         assertEquals("수정된 소개", response.description());
         verify(sellerProfileRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("판매자는 별도 이미지 업로드 API로 프로필 이미지를 변경할 수 있다")
+    void uploadImage() {
+        Long userId = 1L;
+        User seller = createUser(UserRole.SELLER);
+        ReflectionTestUtils.setField(seller, "id", userId);
+        SellerProfile profile = createProfile(seller);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "profile.png", "image/png", new byte[]{1}
+        );
+
+        when(sellerProfileRepository.findByUser_Id(userId))
+                .thenReturn(Optional.of(profile));
+        when(s3ImageService.upload(file, "seller-profiles/1"))
+                .thenReturn("seller-profiles/1/new.png");
+        when(s3ImageService.createDownloadUrl("seller-profiles/1/new.png"))
+                .thenReturn("https://signed.example.com/new.png");
+
+        SellerProfileResponse response = sellerProfileService.uploadImage(userId, file);
+
+        assertEquals("seller-profiles/1/new.png", profile.getImageUrl());
+        assertEquals("https://signed.example.com/new.png", response.imageUrl());
+        verify(s3ImageService).upload(file, "seller-profiles/1");
     }
 
     @Test
@@ -173,7 +201,7 @@ class SellerProfileServiceTest {
     }
 
     private SellerProfileCreateRequest createRequest() {
-        return new SellerProfileCreateRequest("판매자 소개", null, null, null);
+        return new SellerProfileCreateRequest("판매자 소개", null, null);
     }
 
     private SellerProfile createProfile(User user) {

@@ -2,6 +2,7 @@ package com.dropit.product.service;
 
 import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.exception.ServiceException;
+import com.dropit.global.storage.S3ImageService;
 import com.dropit.product.dto.request.ProductCreateRequest;
 import com.dropit.product.dto.request.ProductUpdateRequest;
 import com.dropit.product.dto.response.ProductResponse;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +49,9 @@ class ProductServiceTest {
 
     @Mock
     private DropRepository dropRepository;
+  
+    @Mock
+    private S3ImageService s3ImageService;
 
     @InjectMocks
     private ProductService productService;
@@ -129,6 +134,8 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(product, "id", productId);
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(s3ImageService.createDownloadUrl("products/limited-hoodie.webp"))
+                .thenReturn("https://signed.example.com/limited-hoodie.webp");
 
         ProductResponse response = productService.getProduct(productId);
 
@@ -137,7 +144,10 @@ class ProductServiceTest {
         assertEquals("username", response.getSellerName());
         assertEquals("Limited Hoodie", response.getName());
         assertEquals("Limited edition hoodie", response.getDescription());
-        assertEquals("products/limited-hoodie.webp", response.getImageUrl());
+        assertEquals(
+                "https://signed.example.com/limited-hoodie.webp",
+                response.getImageUrl()
+        );
     }
 
     @Test
@@ -290,6 +300,60 @@ class ProductServiceTest {
 
         assertEquals("Original Product", product.getName());
         assertEquals("Original description", product.getDescription());
+    }
+
+    @Test
+    @DisplayName("판매자는 별도 이미지 업로드 API로 상품 이미지를 변경할 수 있다")
+    void uploadImage() {
+        Long sellerId = 1L;
+        Long productId = 100L;
+        User seller = createUser(UserRole.SELLER);
+        ReflectionTestUtils.setField(seller, "id", sellerId);
+        Product product = new Product(
+                seller,
+                "Product",
+                "Description",
+                "products/100/old.png"
+        );
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "new.png", "image/png", new byte[]{1}
+        );
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(s3ImageService.upload(file, "products/100"))
+                .thenReturn("products/100/new.png");
+        when(s3ImageService.createDownloadUrl("products/100/new.png"))
+                .thenReturn("https://signed.example.com/new.png");
+
+        ProductResponse response = productService.uploadImage(
+                sellerId,
+                productId,
+                file
+        );
+
+        assertEquals("products/100/new.png", product.getImageUrl());
+        assertEquals("https://signed.example.com/new.png", response.getImageUrl());
+        verify(s3ImageService).upload(file, "products/100");
+    }
+
+    @Test
+    @DisplayName("판매자 역할을 잃은 소유자는 상품을 수정할 수 없다")
+    void rejectUpdatingProductWhenOwnerIsNoLongerSeller() {
+        Long sellerId = 1L;
+        Long productId = 100L;
+        User owner = createUser(UserRole.USER);
+        ReflectionTestUtils.setField(owner, "id", sellerId);
+        Product product = new Product(owner, "Product", "Description", null);
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        assertServiceException(
+                ProductErrorCode.SELLER_ROLE_REQUIRED,
+                () -> productService.update(
+                        sellerId,
+                        productId,
+                        new ProductUpdateRequest("Updated", "Updated description")
+                )
+        );
     }
 
     @Test

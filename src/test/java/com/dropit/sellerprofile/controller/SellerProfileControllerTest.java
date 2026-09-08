@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.List;
 
@@ -30,6 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -157,6 +159,37 @@ class SellerProfileControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.description").value("수정된 소개"));
+    }
+
+    @Test
+    @DisplayName("판매자는 판매자 프로필 이미지를 업로드하면 200 상태를 반환한다")
+    void uploadImage() throws Exception {
+        when(sellerProfileService.uploadImage(eq(1L), any()))
+                .thenReturn(new SellerProfileResponse(
+                        100L,
+                        1L,
+                        "판매자 소개",
+                        "https://signed.example.com/profile.png",
+                        null,
+                        null
+                ));
+
+        mockMvc.perform(multipart("/seller-profiles/me/image")
+                        .file(new MockMultipartFile(
+                                "file",
+                                "profile.png",
+                                MediaType.IMAGE_PNG_VALUE,
+                                new byte[]{1}
+                        ))
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imageUrl")
+                        .value("https://signed.example.com/profile.png"));
+
+        verify(sellerProfileService).uploadImage(eq(1L), any());
     }
 
     @Test

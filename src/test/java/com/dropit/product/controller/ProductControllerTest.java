@@ -27,6 +27,7 @@ import org.springframework.security.web.method.annotation.AuthenticationPrincipa
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 
 import java.util.List;
@@ -43,6 +44,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -219,7 +221,7 @@ class ProductControllerTest {
 
         when(productService.getProducts(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(
-                        List.of(new ProductResponse(product)),
+                        List.of(new ProductResponse(product, null)),
                         PageRequest.of(0, 20),
                         1
                 ));
@@ -257,7 +259,7 @@ class ProductControllerTest {
 
         when(productService.getProductsBySeller(eq(1L), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(
-                        List.of(new ProductResponse(product)),
+                        List.of(new ProductResponse(product, null)),
                         PageRequest.of(0, 20),
                         1
                 ));
@@ -297,7 +299,7 @@ class ProductControllerTest {
         ReflectionTestUtils.setField(product, "id", productId);
 
         when(productService.update(eq(sellerId), eq(productId), any(ProductUpdateRequest.class)))
-                .thenReturn(new ProductResponse(product));
+                .thenReturn(new ProductResponse(product, null));
 
         mockMvc.perform(put("/products/{productId}", productId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -385,6 +387,37 @@ class ProductControllerTest {
                         .value("판매 일정에서 사용 중인 상품은 삭제할 수 없습니다."));
 
         verify(productService).delete(1L, 100L);
+
+    @Test
+    @DisplayName("판매자는 상품 이미지를 업로드하면 200 상태와 서명된 이미지 URL을 반환한다")
+    void uploadImage() throws Exception {
+        Long sellerId = 1L;
+        Long productId = 100L;
+        ProductResponse response = mock(ProductResponse.class);
+        when(response.getImageUrl()).thenReturn("https://signed.example.com/product.png");
+        when(productService.uploadImage(eq(sellerId), eq(productId), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(multipart("/products/{productId}/image", productId)
+                        .file(new MockMultipartFile(
+                                "file",
+                                "product.png",
+                                MediaType.IMAGE_PNG_VALUE,
+                                new byte[]{1}
+                        ))
+                        .with(request -> {
+                            request.setMethod("PUT");
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imageUrl")
+                        .value("https://signed.example.com/product.png"));
+
+        verify(productService).uploadImage(
+                eq(sellerId),
+                eq(productId),
+                any()
+        );
     }
 
     private void authenticate(Long userId) {
