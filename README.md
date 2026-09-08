@@ -198,7 +198,7 @@ curl http://localhost:8080/actuator/health
 
 ## CI/CD
 
-`main` 브랜치의 Pull Request와 push에서 테스트 및 JAR 빌드를 수행합니다. `main` push는 AWS OIDC 인증을 통해 ECR 이미지를 만들고, Launch Template과 Auto Scaling Group Instance Refresh를 이용해 배포하도록 구성되어 있습니다.
+`main` 대상 Pull Request에서는 테스트와 JAR 빌드만 수행합니다. PR이 병합되어 `main`에 push되면, build job에서 생성한 JAR artifact를 사용해 AWS OIDC 인증을 거쳐 Docker 이미지를 ECR에 업로드하고, Launch Template 갱신과 Auto Scaling Group Instance Refresh로 배포합니다.
 
 운영 배포에 필요한 AWS 변수와 권한은 GitHub Actions 및 AWS 환경에서 별도로 관리합니다. 비밀값은 저장소나 README에 기록하지 않습니다.
 
