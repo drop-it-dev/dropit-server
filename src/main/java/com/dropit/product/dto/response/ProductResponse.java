@@ -19,14 +19,14 @@ public class ProductResponse {
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
-    public ProductResponse(Product product) {
+    public ProductResponse(Product product, String imageUrl) {
         this.id = product.getId();
         this.sellerId = product.getSeller().getId();
         this.sellerName = product.getSeller().getUsername();
 
         this.name = product.getName();
         this.description = product.getDescription();
-        this.imageUrl = product.getImageUrl();
+        this.imageUrl = imageUrl;
 
         this.createdAt = product.getCreatedAt();
         this.updatedAt = product.getUpdatedAt();
