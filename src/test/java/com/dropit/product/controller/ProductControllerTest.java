@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -372,6 +373,20 @@ class ProductControllerTest {
 
         verify(productService).delete(sellerId, productId);
     }
+
+    @Test
+    @DisplayName("Drop에서 사용 중인 상품을 삭제하면 409 오류 응답을 반환한다")
+    void rejectDeletingProductUsedByDrop() throws Exception {
+        doThrow(new ServiceException(ProductErrorCode.PRODUCT_IN_USE_BY_DROP))
+                .when(productService).delete(1L, 100L);
+
+        mockMvc.perform(delete("/products/{productId}", 100L))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PRODUCT_IN_USE_BY_DROP"))
+                .andExpect(jsonPath("$.message")
+                        .value("판매 일정에서 사용 중인 상품은 삭제할 수 없습니다."));
+
+        verify(productService).delete(1L, 100L);
 
     @Test
     @DisplayName("판매자는 상품 이미지를 업로드하면 200 상태와 서명된 이미지 URL을 반환한다")

@@ -1,5 +1,6 @@
 package com.dropit.product.service;
 
+import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.global.storage.S3ImageService;
 import com.dropit.product.dto.request.ProductCreateRequest;
@@ -46,6 +47,9 @@ class ProductServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private DropRepository dropRepository;
+  
     @Mock
     private S3ImageService s3ImageService;
 
@@ -368,10 +372,34 @@ class ProductServiceTest {
         );
         ReflectionTestUtils.setField(product, "id", productId);
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(dropRepository.existsByProductId(productId)).thenReturn(false);
 
         productService.delete(sellerId, productId);
 
+        verify(dropRepository).existsByProductId(productId);
         verify(productRepository).delete(product);
+    }
+
+    @Test
+    @DisplayName("Drop에서 사용 중인 상품은 삭제할 수 없다")
+    void rejectDeletingProductUsedByDrop() {
+        Long sellerId = 1L;
+        Long productId = 100L;
+        User seller = createUser(UserRole.SELLER);
+        ReflectionTestUtils.setField(seller, "id", sellerId);
+
+        Product product = new Product(seller, "Product", null, null);
+        ReflectionTestUtils.setField(product, "id", productId);
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(dropRepository.existsByProductId(productId)).thenReturn(true);
+
+        assertServiceException(
+                ProductErrorCode.PRODUCT_IN_USE_BY_DROP,
+                () -> productService.delete(sellerId, productId)
+        );
+
+        verify(dropRepository).existsByProductId(productId);
+        verify(productRepository, never()).delete(any(Product.class));
     }
 
     @Test
@@ -411,6 +439,7 @@ class ProductServiceTest {
                 () -> productService.delete(otherSellerId, productId)
         );
 
+        verify(dropRepository, never()).existsByProductId(productId);
         verify(productRepository, never()).delete(any(Product.class));
     }
 

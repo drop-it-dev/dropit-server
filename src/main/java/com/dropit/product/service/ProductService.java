@@ -1,5 +1,6 @@
 package com.dropit.product.service;
 
+import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.global.storage.S3ImageService;
 import com.dropit.product.dto.request.ProductCreateRequest;
@@ -26,6 +27,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final DropRepository dropRepository;
     private final S3ImageService s3ImageService;
 
     @Transactional
@@ -166,12 +168,18 @@ public class ProductService {
                     ProductErrorCode.PRODUCT_OWNER_REQUIRED
             );
         }
-
+      
         if (product.getSeller().getRole() != UserRole.SELLER) {
             throw new ServiceException(
                     ProductErrorCode.SELLER_ROLE_REQUIRED
             );
         }
+
+        if (dropRepository.existsByProductId(productId)) {
+            throw new ServiceException(ProductErrorCode.PRODUCT_IN_USE_BY_DROP);
+        }
+
+        productRepository.delete(product);
 
         return product;
     }
