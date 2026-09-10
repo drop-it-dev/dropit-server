@@ -30,6 +30,7 @@ dependencies {
     implementation "io.github.openfeign.querydsl:querydsl-jpa:${querydslVersion}"
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.webjars:swagger-ui:5.32.11'
 
     implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:4.1.0')
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
@@ -80,6 +81,24 @@ afterEvaluate {
     tasks.named('openapi3') {
         dependsOn(tasks.named('test'))
     }
+}
+
+def copyOpenApiToResources = tasks.register('copyOpenApiToResources', Copy) {
+    dependsOn(tasks.named('openapi3'))
+    from(layout.buildDirectory.file('api-spec/openapi3.yaml'))
+    into(layout.buildDirectory.dir('resources/main/static/openapi'))
+}
+
+tasks.named('bootRun') {
+    dependsOn(copyOpenApiToResources)
+}
+
+tasks.named('resolveMainClassName') {
+    dependsOn(copyOpenApiToResources)
+}
+
+tasks.named('bootJar') {
+    dependsOn(copyOpenApiToResources)
 }
 
 tasks.register('dbUp', Exec) {

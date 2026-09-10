@@ -51,6 +51,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/swagger-ui/**", "/openapi/**", "/webjars/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login", "/auth/reissue").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -67,4 +68,3 @@ public class SecurityConfig {
         return registration;
     }
 }
-
