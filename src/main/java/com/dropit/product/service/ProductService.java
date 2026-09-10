@@ -159,6 +159,15 @@ public class ProductService {
         deleteImageAfterCommit(imageKey);
     }
 
+    @Transactional
+    public void deleteImage(Long sellerId, Long productId) {
+        Product product = findOwnedProduct(sellerId, productId);
+
+        String imageKey = product.getImageUrl();
+        product.changeImage(null);
+        deleteImageAfterCommit(imageKey);
+    }
+
     private Product findOwnedProduct(
             Long sellerId,
             Long productId

@@ -141,6 +141,15 @@ public class SellerProfileService {
         deleteImageAfterCommit(imageKey);
     }
 
+    @Transactional
+    public void deleteImage(Long userId) {
+        SellerProfile sellerProfile = findByUserId(userId);
+
+        String imageKey = sellerProfile.getImageUrl();
+        sellerProfile.changeImage(null);
+        deleteImageAfterCommit(imageKey);
+    }
+
     private User findUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() ->
