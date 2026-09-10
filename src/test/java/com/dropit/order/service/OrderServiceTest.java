@@ -11,6 +11,7 @@ import com.dropit.order.entity.Order;
 import com.dropit.order.entity.OrderItem;
 import com.dropit.order.entity.OrderStatus;
 import com.dropit.order.exception.OrderErrorCode;
+import com.dropit.order.repository.DropUserPurchaseRepository;
 import com.dropit.order.repository.OrderItemRepository;
 import com.dropit.order.repository.OrderRepository;
 import com.dropit.product.entity.Product;
@@ -45,6 +46,7 @@ class OrderServiceTest {
     @Mock private DropRepository dropRepository;
     @Mock private OrderRepository orderRepository;
     @Mock private OrderItemRepository orderItemRepository;
+    @Mock private DropUserPurchaseRepository dropUserPurchaseRepository;
     @InjectMocks private OrderService orderService;
 
     @Test
@@ -56,8 +58,7 @@ class OrderServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(buyer));
         when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
-        when(orderItemRepository.sumQuantityByUserAndDropAndStatus(1L, 100L, OrderStatus.ORDERED))
-                .thenReturn(0L);
+        when(dropUserPurchaseRepository.increaseWithinLimit(100L, 1L, 2, 2)).thenReturn(1);
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order order = invocation.getArgument(0);
             ReflectionTestUtils.setField(order, "id", 1000L);
@@ -87,8 +88,7 @@ class OrderServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(buyer));
         when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
-        when(orderItemRepository.sumQuantityByUserAndDropAndStatus(1L, 100L, OrderStatus.ORDERED))
-                .thenReturn(1L);
+        when(dropUserPurchaseRepository.increaseWithinLimit(100L, 1L, 2, 2)).thenReturn(0);
 
         ServiceException exception = assertThrows(
                 ServiceException.class,
@@ -158,8 +158,10 @@ class OrderServiceTest {
         ReflectionTestUtils.setField(order, "id", 1000L);
         OrderItem orderItem = new OrderItem(order, drop, "Limited Hoodie", new BigDecimal("59000"), 20, 2);
 
-        when(orderRepository.findByIdAndUser_Id(1000L, 1L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdAndUser_IdForUpdate(1000L, 1L)).thenReturn(Optional.of(order));
         when(orderItemRepository.findAllByOrder_IdOrderByIdAsc(1000L)).thenReturn(List.of(orderItem));
+        when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
+        when(dropUserPurchaseRepository.decreaseConfirmedQuantity(100L, 1L, 2)).thenReturn(1);
 
         orderService.cancel(1L, 1000L);
 
