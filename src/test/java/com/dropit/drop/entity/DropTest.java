@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.Mockito.mock;
 
 class DropTest {
@@ -36,6 +37,69 @@ class DropTest {
         Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 0, openAt, openAt.plusDays(1));
 
         assertEquals(0, drop.getPurchaseLimit());
+    }
+
+    @Test
+    @DisplayName("드랍 생성 시 숫자 판매 정책의 유효 범위를 검증한다")
+    void rejectInvalidSalesValuesOnCreate() {
+        LocalDateTime openAt = LocalDateTime.now().plusDays(1);
+
+        assertAll(
+                () -> assertThrows(ServiceException.class,
+                        () -> new Drop(product, BigDecimal.ZERO, 10, 20, 0, openAt, openAt.plusDays(1))),
+                () -> assertThrows(ServiceException.class,
+                        () -> new Drop(product, new BigDecimal("59000"), 0, 20, 0, openAt, openAt.plusDays(1))),
+                () -> assertThrows(ServiceException.class,
+                        () -> new Drop(product, new BigDecimal("59000"), 10, 101, 0, openAt, openAt.plusDays(1))),
+                () -> assertThrows(ServiceException.class,
+                        () -> new Drop(product, new BigDecimal("59000"), 10, 20, -1, openAt, openAt.plusDays(1))),
+                () -> assertThrows(ServiceException.class,
+                        () -> new Drop(product, new BigDecimal("59000.50"), 10, 20, 0, openAt, openAt.plusDays(1))),
+                () -> assertThrows(ServiceException.class,
+                        () -> new Drop(product, new BigDecimal("10000000000000"), 10, 20, 0, openAt, openAt.plusDays(1)))
+        );
+    }
+
+    @Test
+    @DisplayName("드랍 수정은 최종 값 전체를 검증하고 실패 시 기존 값을 보존한다")
+    void preserveAllValuesWhenUpdateIsInvalid() {
+        LocalDateTime openAt = LocalDateTime.now().plusDays(1);
+        LocalDateTime closeAt = openAt.plusDays(1);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 2, openAt, closeAt);
+
+        assertThrows(
+                ServiceException.class,
+                () -> drop.update(
+                        new BigDecimal("49000"),
+                        20,
+                        101,
+                        3,
+                        openAt,
+                        closeAt
+                )
+        );
+
+        assertAll(
+                () -> assertEquals(new BigDecimal("59000"), drop.getPrice()),
+                () -> assertEquals(10, drop.getInitialQuantity()),
+                () -> assertEquals(10, drop.getRemainingQuantity()),
+                () -> assertEquals(20, drop.getDiscountRate()),
+                () -> assertEquals(2, drop.getPurchaseLimit()),
+                () -> assertEquals(openAt, drop.getOpenAt()),
+                () -> assertEquals(closeAt, drop.getCloseAt())
+        );
+    }
+
+    @Test
+    @DisplayName("재고 차감 수량은 양수만 허용한다")
+    void rejectNonPositiveDecreaseQuantity() {
+        LocalDateTime now = LocalDateTime.of(2026, 9, 2, 12, 0);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 0, now.minusHours(1), now.plusHours(1));
+        drop.changeVisibility(true);
+
+        assertThrows(ServiceException.class, () -> drop.decreaseStock(0, now));
+        assertThrows(ServiceException.class, () -> drop.decreaseStock(-1, now));
+        assertEquals(10, drop.getRemainingQuantity());
     }
 
     @Test

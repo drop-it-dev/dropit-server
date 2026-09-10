@@ -59,6 +59,7 @@ public class Drop extends BaseEntity {
             LocalDateTime openAt,
             LocalDateTime closeAt
     ) {
+        validateSalesValues(price, initialQuantity, discountRate, purchaseLimit);
         validatePeriod(openAt, closeAt);
 
         this.product = product;
@@ -91,22 +92,45 @@ public class Drop extends BaseEntity {
         int updatedInitialQuantity = initialQuantity != null ? initialQuantity : this.initialQuantity;
         LocalDateTime updatedOpenAt = openAt != null ? openAt : this.openAt;
         LocalDateTime updatedCloseAt = closeAt != null ? closeAt : this.closeAt;
+        int updatedDiscountRate = discountRate != null ? discountRate : this.discountRate;
+        int updatedPurchaseLimit = purchaseLimit != null ? purchaseLimit : this.purchaseLimit;
+        BigDecimal updatedPrice = price != null ? price : this.price;
+
+        validateSalesValues(updatedPrice, updatedInitialQuantity, updatedDiscountRate, updatedPurchaseLimit);
         validatePeriod(updatedOpenAt, updatedCloseAt);
 
         if (this.remainingQuantity == this.initialQuantity) {
             this.remainingQuantity = updatedInitialQuantity;
         }
         this.initialQuantity = updatedInitialQuantity;
-        this.price = price != null ? price : this.price;
-        this.discountRate = discountRate != null ? discountRate : this.discountRate;
-        this.purchaseLimit = purchaseLimit != null ? purchaseLimit : this.purchaseLimit;
+        this.price = updatedPrice;
+        this.discountRate = updatedDiscountRate;
+        this.purchaseLimit = updatedPurchaseLimit;
         this.openAt = updatedOpenAt;
         this.closeAt = updatedCloseAt;
     }
 
     private static void validatePeriod(LocalDateTime openAt, LocalDateTime closeAt) {
-        if (!openAt.isBefore(closeAt)) {
+        if (openAt == null || closeAt == null || !openAt.isBefore(closeAt)) {
             throw new ServiceException(DropErrorCode.INVALID_DROP_PERIOD);
+        }
+    }
+
+    private static void validateSalesValues(
+            BigDecimal price,
+            int initialQuantity,
+            int discountRate,
+            int purchaseLimit
+    ) {
+        if (price == null
+                || price.signum() <= 0
+                || price.scale() > 0
+                || price.precision() - price.scale() > 13
+                || initialQuantity <= 0
+                || discountRate < 0
+                || discountRate > 100
+                || purchaseLimit < 0) {
+            throw new ServiceException(DropErrorCode.INVALID_DROP_VALUE);
         }
     }
 
@@ -121,6 +145,9 @@ public class Drop extends BaseEntity {
     }
 
     public void decreaseStock(int quantity, LocalDateTime now) {
+        if (quantity <= 0) {
+            throw new ServiceException(DropErrorCode.INVALID_DROP_VALUE);
+        }
         if (!visible || currentStatus(now) != DropStatus.OPEN) {
             throw new ServiceException(DropErrorCode.DROP_NOT_OPEN);
         }
