@@ -83,8 +83,31 @@ afterEvaluate {
     }
 }
 
-def copyOpenApiToResources = tasks.register('copyOpenApiToResources', Copy) {
+def validateOpenApiSpec = tasks.register('validateOpenApiSpec') {
+    group = 'documentation'
+    description = '생성된 OpenAPI 명세가 하나 이상의 API 경로를 포함하는지 검증합니다.'
     dependsOn(tasks.named('openapi3'))
+    doLast {
+        File specFile = layout.buildDirectory.file('api-spec/openapi3.yaml').get().asFile
+        if (!specFile.isFile() || specFile.length() == 0) {
+            throw new GradleException(
+                    "OpenAPI 명세가 생성되지 않았습니다: ${specFile}. ./gradlew openapi3을 실행해 문서화 테스트를 먼저 수행하세요."
+            )
+        }
+
+        String spec = specFile.getText('UTF-8')
+        boolean hasPathsSection = spec.readLines().any { it.trim() == 'paths:' }
+        boolean hasDocumentedPath = spec.readLines().any { it ==~ /^\s{2,}\/\S+:\s*$/ }
+        if (!hasPathsSection || !hasDocumentedPath) {
+            throw new GradleException(
+                    "OpenAPI 명세에 문서화된 API 경로가 없습니다: ${specFile}. -x test를 사용하지 말고 ./gradlew openapi3을 실행하세요."
+            )
+        }
+    }
+}
+
+def copyOpenApiToResources = tasks.register('copyOpenApiToResources', Copy) {
+    dependsOn(validateOpenApiSpec)
     from(layout.buildDirectory.file('api-spec/openapi3.yaml'))
     into(layout.buildDirectory.dir('resources/main/static/openapi'))
 }
