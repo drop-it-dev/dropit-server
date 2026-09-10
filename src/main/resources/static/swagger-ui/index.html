@@ -9,6 +9,7 @@
 <body>
 <div id="swagger-ui"></div>
 <script src="/webjars/swagger-ui/5.32.11/swagger-ui-bundle.js"></script>
+<script src="/swagger-ui/settings.js"></script>
 <script>
     window.onload = () => {
         window.ui = SwaggerUIBundle({
@@ -16,7 +17,8 @@
             dom_id: '#swagger-ui',
             deepLinking: true,
             presets: [SwaggerUIBundle.presets.apis],
-            layout: 'BaseLayout'
+            layout: 'BaseLayout',
+            ...window.swaggerUiConfig
         });
     };
 </script>
