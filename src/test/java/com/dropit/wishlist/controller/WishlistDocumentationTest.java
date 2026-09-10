@@ -48,7 +48,7 @@ class WishlistDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(post("/wishlists/{productId}", 10L)))
                 .andExpect(status().isOk())
                 .andDo(document("wishlists-add", resource(builder()
-                        .tag("Wishlists").summary("상품 찜하기").responseFields(wishlistFields()).build())));
+                        .tag("Wishlists").summary("상품 찜하기").requestHeaders(authorizationHeader()).responseFields(wishlistFields()).build())));
     }
 
     @Test
@@ -57,7 +57,7 @@ class WishlistDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/wishlists/me")))
                 .andExpect(status().isOk())
                 .andDo(document("wishlists-get-me", resource(builder()
-                        .tag("Wishlists").summary("내 찜 목록 조회")
+                        .tag("Wishlists").summary("내 찜 목록 조회").requestHeaders(authorizationHeader())
                         .responseFields(
                                 fieldWithPath("[]").type(ARRAY).description("찜 목록"),
                                 fieldWithPath("[].id").type(NUMBER).description("찜 ID"),
@@ -73,7 +73,7 @@ class WishlistDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/wishlists/{productId}", 10L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("wishlists-delete", resource(builder()
-                        .tag("Wishlists").summary("상품 찜 삭제").build())));
+                        .tag("Wishlists").summary("상품 찜 삭제").requestHeaders(authorizationHeader()).build())));
     }
 
     private WishlistResponse response() {

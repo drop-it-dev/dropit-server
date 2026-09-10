@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.documentationConfiguration;
+import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
 
 /** Common MockMvc wiring for isolated REST Docs contract tests. */
 public abstract class DocumentationTestSupport {
@@ -57,6 +58,10 @@ public abstract class DocumentationTestSupport {
             request.addHeader("Authorization", DOCUMENTATION_ACCESS_TOKEN);
             return request;
         };
+    }
+
+    protected org.springframework.restdocs.headers.HeaderDescriptor authorizationHeader() {
+        return headerWithName("Authorization").description("Bearer access token");
     }
 
     protected MockHttpServletRequestBuilder authenticated(MockHttpServletRequestBuilder request) {

@@ -23,6 +23,8 @@ import com.epages.restdocs.apispec.Schema;
 import static org.springframework.restdocs.payload.JsonFieldType.NUMBER;
 import static org.springframework.restdocs.payload.JsonFieldType.STRING;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.request.RequestDocumentation.partWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.requestParts;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -54,7 +56,7 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
                         .content("{\"description\":\"소개\",\"instagramUrl\":\"https://instagram.com/seller\",\"youtubeUrl\":\"https://youtube.com/@seller\"}")))
                 .andExpect(status().isCreated())
                 .andDo(document("seller-profiles-create", resource(builder()
-                        .tag("Seller Profiles").summary("판매자 프로필 생성").description("로그인한 판매자의 프로필을 생성합니다.")
+                        .tag("Seller Profiles").summary("판매자 프로필 생성").description("로그인한 판매자의 프로필을 생성합니다.").requestHeaders(authorizationHeader())
                         .requestFields(
                                 fieldWithPath("description").optional().description("판매자 소개"),
                                 fieldWithPath("instagramUrl").optional().description("인스타그램 URL"),
@@ -68,16 +70,16 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/seller-profiles/me")))
                 .andExpect(status().isOk())
                 .andDo(document("seller-profiles-get-me", resource(builder()
-                        .tag("Seller Profiles").summary("내 판매자 프로필 조회").responseSchema(new Schema("SellerProfile")).responseFields(profileFields()).build())));
+                        .tag("Seller Profiles").summary("내 판매자 프로필 조회").requestHeaders(authorizationHeader()).responseSchema(new Schema("SellerProfile")).responseFields(profileFields()).build())));
     }
 
     @Test
     void getById() throws Exception {
         when(sellerProfileService.getById(10L)).thenReturn(response());
-        mockMvc.perform(get("/seller-profiles/{sellerProfileId}", 10L))
+        mockMvc.perform(authenticated(get("/seller-profiles/{sellerProfileId}", 10L)))
                 .andExpect(status().isOk())
                 .andDo(document("seller-profiles-get", resource(builder()
-                        .tag("Seller Profiles").summary("판매자 프로필 조회").responseFields(profileFields()).build())));
+                        .tag("Seller Profiles").summary("판매자 프로필 조회").requestHeaders(authorizationHeader()).responseFields(profileFields()).build())));
     }
 
     @Test
@@ -88,7 +90,7 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
                         .content("{\"description\":\"수정된 소개\",\"instagramUrl\":\"https://instagram.com/new\",\"youtubeUrl\":\"https://youtube.com/@new\"}")))
                 .andExpect(status().isOk())
                 .andDo(document("seller-profiles-update", resource(builder()
-                        .tag("Seller Profiles").summary("판매자 프로필 수정")
+                        .tag("Seller Profiles").summary("판매자 프로필 수정").requestHeaders(authorizationHeader())
                         .requestFields(
                                 fieldWithPath("description").optional().description("판매자 소개"),
                                 fieldWithPath("instagramUrl").optional().description("인스타그램 URL"),
@@ -100,13 +102,16 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
     void uploadImage() throws Exception {
         when(sellerProfileService.uploadImage(eq(1L), any())).thenReturn(response());
         MockMultipartFile file = new MockMultipartFile("file", "profile.jpg", "image/jpeg", "image".getBytes());
-        mockMvc.perform(multipart("/seller-profiles/me/image").file(file).with(bearerToken()).with(request -> {
+        mockMvc.perform(multipart("/seller-profiles/me/image").file(file).content(" ").with(bearerToken()).with(request -> {
             request.setMethod("PUT");
             return request;
         }))
                 .andExpect(status().isOk())
                 .andDo(document("seller-profiles-upload-image", resource(builder()
-                        .tag("Seller Profiles").summary("판매자 프로필 이미지 업로드").description("프로필 이미지를 업로드합니다.").responseFields(profileFields()).build())));
+                        .tag("Seller Profiles").summary("판매자 프로필 이미지 업로드").description("프로필 이미지를 업로드합니다.").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("MultipartImage"))
+                        .responseFields(profileFields()).build()),
+                        requestParts(partWithName("file").description("업로드할 이미지 파일"))));
     }
 
     @Test
@@ -114,7 +119,7 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/seller-profiles/me")))
                 .andExpect(status().isNoContent())
                 .andDo(document("seller-profiles-delete", resource(builder()
-                        .tag("Seller Profiles").summary("판매자 프로필 삭제").build())));
+                        .tag("Seller Profiles").summary("판매자 프로필 삭제").requestHeaders(authorizationHeader()).build())));
     }
 
     private SellerProfileResponse response() {

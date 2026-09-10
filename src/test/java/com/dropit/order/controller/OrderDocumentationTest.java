@@ -50,7 +50,7 @@ class OrderDocumentationTest extends DocumentationTestSupport {
                         .content("{\"items\":[{\"dropId\":100,\"quantity\":2}]}")))
                 .andExpect(status().isCreated())
                 .andDo(document("orders-create", resource(builder()
-                        .tag("Orders").summary("주문 생성").description("한 개의 드랍을 대상으로 주문을 생성합니다.")
+                        .tag("Orders").summary("주문 생성").description("한 개의 드랍을 대상으로 주문을 생성합니다.").requestHeaders(authorizationHeader())
                         .requestFields(
                                 fieldWithPath("items").type(ARRAY).description("주문 항목 목록 (현재 한 항목만 허용)"),
                                 fieldWithPath("items[].dropId").type(NUMBER).description("주문할 드랍 ID"),
@@ -64,7 +64,7 @@ class OrderDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/orders/me")))
                 .andExpect(status().isOk())
                 .andDo(document("orders-get-me", resource(builder()
-                        .tag("Orders").summary("내 주문 목록 조회")
+                        .tag("Orders").summary("내 주문 목록 조회").requestHeaders(authorizationHeader())
                         .responseFields(
                                 fieldWithPath("[]").type(ARRAY).description("주문 요약 목록"),
                                 fieldWithPath("[].id").type(NUMBER).description("주문 ID"),
@@ -80,7 +80,7 @@ class OrderDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/orders/{orderId}", 1000L)))
                 .andExpect(status().isOk())
                 .andDo(document("orders-get", resource(builder()
-                        .tag("Orders").summary("내 주문 상세 조회").responseFields(orderFields()).build())));
+                        .tag("Orders").summary("내 주문 상세 조회").requestHeaders(authorizationHeader()).responseFields(orderFields()).build())));
     }
 
     @Test
@@ -88,7 +88,7 @@ class OrderDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(post("/orders/{orderId}/cancel", 1000L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("orders-cancel", resource(builder()
-                        .tag("Orders").summary("주문 취소").description("현재 사용자의 주문을 취소합니다.").build())));
+                        .tag("Orders").summary("주문 취소").description("현재 사용자의 주문을 취소합니다.").requestHeaders(authorizationHeader()).build())));
     }
 
     private OrderResponse orderResponse() {

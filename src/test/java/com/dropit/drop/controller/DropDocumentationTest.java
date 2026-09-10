@@ -29,6 +29,7 @@ import static org.springframework.restdocs.payload.JsonFieldType.NUMBER;
 import static org.springframework.restdocs.payload.JsonFieldType.STRING;
 import static org.springframework.restdocs.payload.JsonFieldType.BOOLEAN;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -57,7 +58,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                         .content("{\"productId\":10,\"price\":59000,\"initialQuantity\":100,\"discountRate\":20,\"purchaseLimit\":2,\"openAt\":\"2030-01-01T10:00:00\",\"closeAt\":\"2030-01-02T10:00:00\"}")))
                 .andExpect(status().isCreated())
                 .andDo(document("drops-create", resource(builder()
-                        .tag("Drops").summary("드랍 생성")
+                        .tag("Drops").summary("드랍 생성").requestHeaders(authorizationHeader())
                         .requestFields(
                                 fieldWithPath("productId").type(NUMBER).description("상품 ID"),
                                 fieldWithPath("price").type(NUMBER).description("판매 가격"),
@@ -72,28 +73,39 @@ class DropDocumentationTest extends DocumentationTestSupport {
     @Test
     void getAll() throws Exception {
         when(dropService.getAll(any(), any())).thenReturn(new PageImpl<>(List.of(dropResponse()), PageRequest.of(0, 20), 1));
-        mockMvc.perform(get("/drops").param("keyword", "hoodie").param("status", "OPEN").param("page", "0").param("size", "20"))
+        mockMvc.perform(authenticated(get("/drops").param("keyword", "hoodie").param("status", "OPEN").param("page", "0").param("size", "20")))
                 .andExpect(status().isOk())
                 .andDo(document("drops-get-all", resource(builder()
-                        .tag("Drops").summary("드랍 목록 조회").description("검색 조건과 페이징 조건으로 드랍을 조회합니다.").build())));
+                        .tag("Drops").summary("드랍 목록 조회").description("검색 조건과 페이징 조건으로 드랍을 조회합니다.")
+                        .requestHeaders(authorizationHeader())
+                        .queryParameters(
+                                parameterWithName("keyword").optional().description("상품명 검색어"),
+                                parameterWithName("status").optional().description("드랍 상태"),
+                                parameterWithName("sortType").optional().description("정렬 기준"),
+                                parameterWithName("page").description("페이지 번호"),
+                                parameterWithName("size").description("페이지 크기"),
+                                parameterWithName("sort").optional().description("정렬 조건")
+                        ).build())));
     }
 
     @Test
     void getOne() throws Exception {
         when(dropService.getOne(100L)).thenReturn(dropResponse());
-        mockMvc.perform(get("/drops/{dropId}", 100L))
+        mockMvc.perform(authenticated(get("/drops/{dropId}", 100L)))
                 .andExpect(status().isOk())
                 .andDo(document("drops-get", resource(builder()
-                        .tag("Drops").summary("드랍 단건 조회").responseFields(dropFields()).build())));
+                        .tag("Drops").summary("드랍 단건 조회").requestHeaders(authorizationHeader()).responseFields(dropFields()).build())));
     }
 
     @Test
     void getPublicDropsBySeller() throws Exception {
         when(dropService.getPublicDropsBySeller(eq(1L), any())).thenReturn(new PageImpl<>(List.of(dropResponse()), PageRequest.of(0, 20), 1));
-        mockMvc.perform(get("/creators/{sellerId}/drops", 1L).param("page", "0").param("size", "20"))
+        mockMvc.perform(authenticated(get("/creators/{sellerId}/drops", 1L).param("page", "0").param("size", "20")))
                 .andExpect(status().isOk())
                 .andDo(document("drops-get-by-creator", resource(builder()
-                        .tag("Drops").summary("판매자 공개 드랍 목록 조회").build())));
+                        .tag("Drops").summary("판매자 공개 드랍 목록 조회").requestHeaders(authorizationHeader())
+                        .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
+                        .build())));
     }
 
     @Test
@@ -102,7 +114,9 @@ class DropDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/users/me/drops")).param("page", "0").param("size", "20"))
                 .andExpect(status().isOk())
                 .andDo(document("drops-get-my-drops", resource(builder()
-                        .tag("Drops").summary("내 드랍 목록 조회").build())));
+                        .tag("Drops").summary("내 드랍 목록 조회").requestHeaders(authorizationHeader())
+                        .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
+                        .build())));
     }
 
     @Test
@@ -112,7 +126,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                         .content("{\"price\":60000,\"initialQuantity\":120,\"discountRate\":10,\"purchaseLimit\":3,\"openAt\":\"2030-01-01T10:00:00\",\"closeAt\":\"2030-01-02T10:00:00\"}")))
                 .andExpect(status().isOk())
                 .andDo(document("drops-update", resource(builder()
-                        .tag("Drops").summary("드랍 수정")
+                        .tag("Drops").summary("드랍 수정").requestHeaders(authorizationHeader())
                         .requestFields(
                                 fieldWithPath("price").optional().type(NUMBER).description("판매 가격"),
                                 fieldWithPath("initialQuantity").optional().type(NUMBER).description("초기 수량"),
@@ -130,7 +144,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                         .content("{\"visible\":true}")))
                 .andExpect(status().isOk())
                 .andDo(document("drops-change-visibility", resource(builder()
-                        .tag("Drops").summary("드랍 공개 여부 변경")
+                        .tag("Drops").summary("드랍 공개 여부 변경").requestHeaders(authorizationHeader())
                         .requestFields(fieldWithPath("visible").type(BOOLEAN).description("공개 여부"))
                         .responseFields(dropFields()).build())));
     }
@@ -140,7 +154,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/drops/{dropId}", 100L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("drops-delete", resource(builder()
-                        .tag("Drops").summary("드랍 삭제").build())));
+                        .tag("Drops").summary("드랍 삭제").requestHeaders(authorizationHeader()).build())));
     }
 
     private DropResponse dropResponse() {

@@ -46,7 +46,7 @@ class NotificationDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/notifications/me")))
                 .andExpect(status().isOk())
                 .andDo(document("notifications-get-me", resource(builder()
-                        .tag("Notifications").summary("내 알림 목록 조회")
+                        .tag("Notifications").summary("내 알림 목록 조회").requestHeaders(authorizationHeader())
                         .responseFields(
                                 fieldWithPath("[]").type(ARRAY).description("알림 목록"),
                                 fieldWithPath("[].id").type(NUMBER).description("알림 ID"),
@@ -63,7 +63,7 @@ class NotificationDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(patch("/notifications/{notificationId}/read", 100L)))
                 .andExpect(status().isOk())
                 .andDo(document("notifications-mark-read", resource(builder()
-                        .tag("Notifications").summary("알림 읽음 처리")
+                        .tag("Notifications").summary("알림 읽음 처리").requestHeaders(authorizationHeader())
                         .responseFields(
                                 fieldWithPath("id").type(NUMBER).description("알림 ID"),
                                 fieldWithPath("title").type(STRING).description("알림 제목"),

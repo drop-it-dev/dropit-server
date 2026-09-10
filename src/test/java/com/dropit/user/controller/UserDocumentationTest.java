@@ -43,7 +43,7 @@ class UserDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/users/me")))
                 .andExpect(status().isOk())
                 .andDo(document("users-get-me", resource(builder()
-                        .tag("Users").summary("내 정보 조회").description("현재 로그인한 사용자의 정보를 조회합니다.")
+                        .tag("Users").summary("내 정보 조회").description("현재 로그인한 사용자의 정보를 조회합니다.").requestHeaders(authorizationHeader())
                         .build())));
     }
 
@@ -55,7 +55,7 @@ class UserDocumentationTest extends DocumentationTestSupport {
                         .content("{\"email\":\"new@example.com\",\"username\":\"new-user\"}")))
                 .andExpect(status().isOk())
                 .andDo(document("users-update-me", resource(builder()
-                        .tag("Users").summary("내 정보 수정").description("현재 로그인한 사용자의 이메일과 이름을 수정합니다.")
+                        .tag("Users").summary("내 정보 수정").description("현재 로그인한 사용자의 이메일과 이름을 수정합니다.").requestHeaders(authorizationHeader())
                         .requestFields(
                                 fieldWithPath("email").optional().description("변경할 이메일 주소"),
                                 fieldWithPath("username").optional().description("변경할 사용자 이름")
@@ -77,7 +77,7 @@ class UserDocumentationTest extends DocumentationTestSupport {
                         .content("{\"currentPassword\":\"old-password\",\"newPassword\":\"new-password\"}")))
                 .andExpect(status().isNoContent())
                 .andDo(document("users-update-password", resource(builder()
-                        .tag("Users").summary("비밀번호 변경").description("현재 비밀번호를 확인하고 새 비밀번호로 변경합니다.")
+                        .tag("Users").summary("비밀번호 변경").description("현재 비밀번호를 확인하고 새 비밀번호로 변경합니다.").requestHeaders(authorizationHeader())
                         .requestFields(
                                 fieldWithPath("currentPassword").description("현재 비밀번호"),
                                 fieldWithPath("newPassword").description("새 비밀번호 (8자 이상)")
@@ -89,7 +89,7 @@ class UserDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/users/me")))
                 .andExpect(status().isNoContent())
                 .andDo(document("users-delete-me", resource(builder()
-                        .tag("Users").summary("내 계정 삭제").description("현재 로그인한 사용자의 계정을 삭제합니다.").build())));
+                        .tag("Users").summary("내 계정 삭제").description("현재 로그인한 사용자의 계정을 삭제합니다.").requestHeaders(authorizationHeader()).build())));
     }
 
     @Test
@@ -97,7 +97,7 @@ class UserDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/users/{userId}", 2L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("users-delete-by-admin", resource(builder()
-                        .tag("Users").summary("사용자 삭제").description("관리자가 지정한 사용자를 삭제합니다.").build())));
+                        .tag("Users").summary("사용자 삭제").description("관리자가 지정한 사용자를 삭제합니다.").requestHeaders(authorizationHeader()).build())));
     }
 
     private User user() {

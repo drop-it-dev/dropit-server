@@ -1,6 +1,7 @@
 package com.dropit.product.controller;
 
 import com.dropit.documentation.DocumentationTestSupport;
+import com.epages.restdocs.apispec.Schema;
 import com.dropit.product.dto.response.ProductResponse;
 import com.dropit.product.entity.Product;
 import com.dropit.product.service.ProductService;
@@ -26,6 +27,9 @@ import static com.epages.restdocs.apispec.ResourceSnippetParameters.builder;
 import static org.springframework.restdocs.payload.JsonFieldType.NUMBER;
 import static org.springframework.restdocs.payload.JsonFieldType.STRING;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.partWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.requestParts;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -55,7 +59,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                         .content("{\"name\":\"Limited Hoodie\",\"description\":\"Limited edition hoodie\"}")))
                 .andExpect(status().isCreated())
                 .andDo(document("products-create", resource(builder()
-                        .tag("Products").summary("상품 생성")
+                        .tag("Products").summary("상품 생성").requestHeaders(authorizationHeader())
                         .requestFields(fieldWithPath("name").description("상품명"), fieldWithPath("description").optional().description("상품 설명"))
                         .build())));
     }
@@ -63,28 +67,34 @@ class ProductDocumentationTest extends DocumentationTestSupport {
     @Test
     void getProduct() throws Exception {
         when(productService.getProduct(100L)).thenReturn(productResponse());
-        mockMvc.perform(get("/products/{productId}", 100L))
+        mockMvc.perform(authenticated(get("/products/{productId}", 100L)))
                 .andExpect(status().isOk())
                 .andDo(document("products-get", resource(builder()
-                        .tag("Products").summary("상품 단건 조회").responseFields(productFields()).build())));
+                        .tag("Products").summary("상품 단건 조회").requestHeaders(authorizationHeader())
+                        .responseFields(productFields()).build())));
     }
 
     @Test
     void getProducts() throws Exception {
         when(productService.getProducts(any())).thenReturn(new PageImpl<>(List.of(productResponse()), PageRequest.of(0, 20), 1));
-        mockMvc.perform(get("/products").param("page", "0").param("size", "20"))
+        mockMvc.perform(authenticated(get("/products").param("page", "0").param("size", "20")))
                 .andExpect(status().isOk())
                 .andDo(document("products-get-all", resource(builder()
-                        .tag("Products").summary("상품 목록 조회").description("상품 목록을 페이징하여 조회합니다.").responseFields(pageFields()).build())));
+                        .tag("Products").summary("상품 목록 조회").description("상품 목록을 페이징하여 조회합니다.")
+                        .requestHeaders(authorizationHeader())
+                        .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
+                        .responseFields(pageFields()).build())));
     }
 
     @Test
     void getProductsBySeller() throws Exception {
         when(productService.getProductsBySeller(eq(1L), any())).thenReturn(new PageImpl<>(List.of(productResponse()), PageRequest.of(0, 20), 1));
-        mockMvc.perform(get("/sellers/{sellerId}/products", 1L).param("page", "0").param("size", "20"))
+        mockMvc.perform(authenticated(get("/sellers/{sellerId}/products", 1L).param("page", "0").param("size", "20")))
                 .andExpect(status().isOk())
                 .andDo(document("products-get-by-seller", resource(builder()
-                        .tag("Products").summary("판매자 상품 목록 조회").responseFields(pageFields()).build())));
+                        .tag("Products").summary("판매자 상품 목록 조회").requestHeaders(authorizationHeader())
+                        .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
+                        .responseFields(pageFields()).build())));
     }
 
     @Test
@@ -94,7 +104,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                         .content("{\"name\":\"Updated Hoodie\",\"description\":\"Updated description\"}")))
                 .andExpect(status().isOk())
                 .andDo(document("products-update", resource(builder()
-                        .tag("Products").summary("상품 수정")
+                        .tag("Products").summary("상품 수정").requestHeaders(authorizationHeader())
                         .requestFields(fieldWithPath("name").description("상품명"), fieldWithPath("description").optional().description("상품 설명"))
                         .responseFields(productFields()).build())));
     }
@@ -104,20 +114,23 @@ class ProductDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/products/{productId}", 100L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("products-delete", resource(builder()
-                        .tag("Products").summary("상품 삭제").build())));
+                        .tag("Products").summary("상품 삭제").requestHeaders(authorizationHeader()).build())));
     }
 
     @Test
     void uploadImage() throws Exception {
         when(productService.uploadImage(eq(1L), eq(100L), any())).thenReturn(productResponse());
         MockMultipartFile file = new MockMultipartFile("file", "product.jpg", "image/jpeg", "image".getBytes());
-        mockMvc.perform(multipart("/products/{productId}/image", 100L).file(file).with(bearerToken()).with(request -> {
+        mockMvc.perform(multipart("/products/{productId}/image", 100L).file(file).content(" ").with(bearerToken()).with(request -> {
             request.setMethod("PUT");
             return request;
         }))
                 .andExpect(status().isOk())
                 .andDo(document("products-upload-image", resource(builder()
-                        .tag("Products").summary("상품 이미지 업로드").responseFields(productFields()).build())));
+                        .tag("Products").summary("상품 이미지 업로드").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("MultipartImage"))
+                        .responseFields(productFields()).build()),
+                        requestParts(partWithName("file").description("업로드할 이미지 파일"))));
     }
 
     private ProductResponse productResponse() {
