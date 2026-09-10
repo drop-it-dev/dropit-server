@@ -2,6 +2,7 @@ package com.dropit.order.service;
 
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.repository.DropRepository;
+import com.dropit.global.exception.CommonErrorCode;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.order.dto.request.OrderCreateRequest;
 import com.dropit.order.dto.request.OrderItemCreateRequest;
@@ -11,6 +12,7 @@ import com.dropit.order.entity.Order;
 import com.dropit.order.entity.OrderItem;
 import com.dropit.order.entity.OrderStatus;
 import com.dropit.order.exception.OrderErrorCode;
+import com.dropit.order.repository.DropUserPurchaseRepository;
 import com.dropit.order.repository.OrderItemRepository;
 import com.dropit.order.repository.OrderRepository;
 import com.dropit.product.entity.Product;
@@ -20,7 +22,6 @@ import com.dropit.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -34,9 +35,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
@@ -45,6 +44,7 @@ class OrderServiceTest {
     @Mock private DropRepository dropRepository;
     @Mock private OrderRepository orderRepository;
     @Mock private OrderItemRepository orderItemRepository;
+    @Mock private DropUserPurchaseRepository dropUserPurchaseRepository;
     @InjectMocks private OrderService orderService;
 
     @Test
@@ -56,8 +56,7 @@ class OrderServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(buyer));
         when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
-        when(orderItemRepository.sumQuantityByUserAndDropAndStatus(1L, 100L, OrderStatus.ORDERED))
-                .thenReturn(0L);
+        when(dropUserPurchaseRepository.increaseWithinLimit(100L, 1L, 2, 2)).thenReturn(1);
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order order = invocation.getArgument(0);
             ReflectionTestUtils.setField(order, "id", 1000L);
@@ -76,6 +75,8 @@ class OrderServiceTest {
         assertEquals(new BigDecimal("59000"), response.items().getFirst().unitPrice());
         assertEquals(20, response.items().getFirst().discountRate());
         assertEquals(new BigDecimal("94400"), response.items().getFirst().itemTotalPrice());
+        verify(dropUserPurchaseRepository, times(1)).createCounterIfAbsent(100L, 1L);
+        verify(dropUserPurchaseRepository, times(1)).increaseWithinLimit(100L, 1L, 2, 2);
     }
 
     @Test
@@ -87,8 +88,7 @@ class OrderServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(buyer));
         when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
-        when(orderItemRepository.sumQuantityByUserAndDropAndStatus(1L, 100L, OrderStatus.ORDERED))
-                .thenReturn(1L);
+        when(dropUserPurchaseRepository.increaseWithinLimit(100L, 1L, 2, 2)).thenReturn(0);
 
         ServiceException exception = assertThrows(
                 ServiceException.class,
@@ -158,13 +158,39 @@ class OrderServiceTest {
         ReflectionTestUtils.setField(order, "id", 1000L);
         OrderItem orderItem = new OrderItem(order, drop, "Limited Hoodie", new BigDecimal("59000"), 20, 2);
 
-        when(orderRepository.findByIdAndUser_Id(1000L, 1L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdAndUser_IdForUpdate(1000L, 1L)).thenReturn(Optional.of(order));
         when(orderItemRepository.findAllByOrder_IdOrderByIdAsc(1000L)).thenReturn(List.of(orderItem));
+        when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
+        when(dropUserPurchaseRepository.decreaseConfirmedQuantity(100L, 1L, 2)).thenReturn(1);
 
         orderService.cancel(1L, 1000L);
 
         assertEquals(OrderStatus.CANCELED, order.getStatus());
         assertEquals(10, drop.getRemainingQuantity());
+        verify(dropUserPurchaseRepository, times(1)).decreaseConfirmedQuantity(100L, 1L, 2);
+    }
+
+    @Test
+    @DisplayName("구매 수량 카운터를 복구하지 못하면 취소를 실패한다")
+    void failToCancelWhenPurchaseCounterIsNotDecreased() {
+        User buyer = createUser(1L, UserRole.USER);
+        Drop drop = createOpenDrop(10L, 100L, 10, 20, 2);
+        drop.decreaseStock(2, LocalDateTime.now());
+        Order order = new Order(buyer, new BigDecimal("94400"));
+        ReflectionTestUtils.setField(order, "id", 1000L);
+        OrderItem orderItem = new OrderItem(order, drop, "Limited Hoodie", new BigDecimal("59000"), 20, 2);
+
+        when(orderRepository.findByIdAndUser_IdForUpdate(1000L, 1L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findAllByOrder_IdOrderByIdAsc(1000L)).thenReturn(List.of(orderItem));
+        when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
+        when(dropUserPurchaseRepository.decreaseConfirmedQuantity(100L, 1L, 2)).thenReturn(0);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> orderService.cancel(1L, 1000L)
+        );
+
+        assertEquals(CommonErrorCode.INTERNAL_SERVER_ERROR, exception.getErrorCode());
     }
 
     private User createUser(Long id, UserRole role) {

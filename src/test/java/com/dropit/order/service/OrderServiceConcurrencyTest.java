@@ -5,7 +5,10 @@ import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.config.QuerydslConfig;
 import com.dropit.order.dto.request.OrderCreateRequest;
 import com.dropit.order.dto.request.OrderItemCreateRequest;
+import com.dropit.order.entity.DropUserPurchase;
 import com.dropit.order.entity.OrderItem;
+import com.dropit.order.exception.OrderErrorCode;
+import com.dropit.order.repository.DropUserPurchaseRepository;
 import com.dropit.order.repository.OrderItemRepository;
 import com.dropit.order.repository.OrderRepository;
 import com.dropit.product.entity.Product;
@@ -70,6 +73,7 @@ class OrderServiceConcurrencyTest {
     @Autowired private DropRepository dropRepository;
     @Autowired private OrderRepository orderRepository;
     @Autowired private OrderItemRepository orderItemRepository;
+    @Autowired private DropUserPurchaseRepository dropUserPurchaseRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
 
     @DynamicPropertySource
@@ -83,6 +87,7 @@ class OrderServiceConcurrencyTest {
     void cleanDatabase() {
         orderItemRepository.deleteAllInBatch();
         orderRepository.deleteAllInBatch();
+        dropUserPurchaseRepository.deleteAllInBatch();
         dropRepository.deleteAllInBatch();
         productRepository.deleteAllInBatch();
         userRepository.deleteAllInBatch();
@@ -122,6 +127,24 @@ class OrderServiceConcurrencyTest {
     }
 
     @Test
+    @DisplayName("동일 사용자의 동시 주문은 구매 한도를 초과하지 않는다")
+    void enforcePurchaseLimitForSameUser() throws Exception {
+        Fixture fixture = createFixture(100, 1, 3);
+
+        CallResult result = placeConcurrentOrdersForSameBuyer(fixture, 1, 20);
+
+        assertEquals(3, result.successes());
+        assertEquals(17, result.rejections());
+        assertEquals(3, totalOrderedQuantity());
+        assertEquals(97, remainingQuantity(fixture.drop()));
+        DropUserPurchase purchase = dropUserPurchaseRepository.findByDropIdAndUserId(
+                fixture.drop().getId(),
+                fixture.buyers().getFirst().getId()
+        ).orElseThrow();
+        assertEquals(3, purchase.getConfirmedQuantity());
+    }
+
+    @Test
     @DisplayName("주문 항목 저장에 실패하면 재고와 주문 데이터가 함께 rollback된다")
     void rollbackStockWhenOrderItemSaveFails() {
         Fixture fixture = createFixture(10, 1);
@@ -141,6 +164,7 @@ class OrderServiceConcurrencyTest {
         );
 
         assertEquals(10, remainingQuantity(fixture.drop()));
+        assertEquals(0, dropUserPurchaseRepository.count());
         assertEquals(0, orderRepository.count());
         assertEquals(0, orderItemRepository.count());
     }
@@ -192,6 +216,46 @@ class OrderServiceConcurrencyTest {
         }
     }
 
+    private CallResult placeConcurrentOrdersForSameBuyer(
+            Fixture fixture,
+            int quantity,
+            int requestCount
+    ) throws Exception {
+        try (ExecutorService executor = Executors.newFixedThreadPool(requestCount)) {
+            CountDownLatch ready = new CountDownLatch(requestCount);
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<Boolean>> futures = new ArrayList<>();
+            Long buyerId = fixture.buyers().getFirst().getId();
+
+            for (int index = 0; index < requestCount; index++) {
+                futures.add(executor.submit(() -> {
+                    ready.countDown();
+                    assertTrue(start.await(10, TimeUnit.SECONDS));
+                    try {
+                        orderService.create(buyerId, orderRequest(fixture.drop().getId(), quantity));
+                        return true;
+                    } catch (com.dropit.global.exception.ServiceException exception) {
+                        if (exception.getErrorCode() != OrderErrorCode.PURCHASE_LIMIT_EXCEEDED) {
+                            throw exception;
+                        }
+                        return false;
+                    }
+                }));
+            }
+
+            assertTrue(ready.await(10, TimeUnit.SECONDS));
+            start.countDown();
+
+            int successes = 0;
+            for (Future<Boolean> future : futures) {
+                if (future.get(60, TimeUnit.SECONDS)) {
+                    successes++;
+                }
+            }
+            return new CallResult(successes, requestCount - successes);
+        }
+    }
+
     private CallResult get(Future<CallResult> future) throws Exception {
         try {
             return future.get(60, TimeUnit.SECONDS);
@@ -201,6 +265,10 @@ class OrderServiceConcurrencyTest {
     }
 
     private Fixture createFixture(int stock, int buyerCount) {
+        return createFixture(stock, buyerCount, 0);
+    }
+
+    private Fixture createFixture(int stock, int buyerCount, int purchaseLimit) {
         User seller = userRepository.saveAndFlush(
                 new User("seller@example.com", "password", "seller", UserRole.SELLER)
         );
@@ -213,7 +281,7 @@ class OrderServiceConcurrencyTest {
                 new BigDecimal("59000"),
                 stock,
                 20,
-                0,
+                purchaseLimit,
                 openAt,
                 openAt.plusHours(1)
         );
