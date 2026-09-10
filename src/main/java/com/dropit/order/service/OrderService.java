@@ -10,8 +10,8 @@ import com.dropit.order.dto.response.OrderResponse;
 import com.dropit.order.dto.response.OrderSummaryResponse;
 import com.dropit.order.entity.Order;
 import com.dropit.order.entity.OrderItem;
-import com.dropit.order.entity.OrderStatus;
 import com.dropit.order.exception.OrderErrorCode;
+import com.dropit.order.repository.DropUserPurchaseRepository;
 import com.dropit.order.repository.OrderItemRepository;
 import com.dropit.order.repository.OrderRepository;
 import com.dropit.user.entity.User;
@@ -33,6 +33,7 @@ public class OrderService {
     private final DropRepository dropRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final DropUserPurchaseRepository dropUserPurchaseRepository;
 
     @Transactional
     public OrderResponse create(Long userId, OrderCreateRequest request) {
@@ -43,7 +44,7 @@ public class OrderService {
         Drop drop = dropRepository.findByIdForUpdate(itemRequest.dropId())
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now();
-        validatePurchaseLimit(userId, drop, itemRequest.quantity());
+        reservePurchaseLimit(userId, drop, itemRequest.quantity());
         drop.decreaseStock(itemRequest.quantity(), now);
         BigDecimal totalPrice = OrderItem.calculateItemTotalPrice(
                 drop.getPrice(),
@@ -76,27 +77,32 @@ public class OrderService {
 
     @Transactional
     public void cancel(Long userId, Long orderId) {
-        Order order = orderRepository.findByIdAndUser_Id(orderId, userId)
+        Order order = orderRepository.findByIdAndUser_IdForUpdate(orderId, userId)
                 .orElseThrow(() -> new ServiceException(OrderErrorCode.ORDER_NOT_FOUND));
         List<OrderItem> orderItems = orderItemRepository.findAllByOrder_IdOrderByIdAsc(orderId);
 
         order.cancel();
         for (OrderItem orderItem : orderItems) {
-            orderItem.getDrop().restoreStock(orderItem.getQuantity());
+            Drop drop = dropRepository.findByIdForUpdate(orderItem.getDrop().getId())
+                    .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
+            drop.restoreStock(orderItem.getQuantity());
+            dropUserPurchaseRepository.decreaseConfirmedQuantity(
+                    drop.getId(),
+                    userId,
+                    orderItem.getQuantity()
+            );
         }
     }
 
-    private void validatePurchaseLimit(Long userId, Drop drop, int quantity) {
-        if (drop.getPurchaseLimit() == 0) {
-            return;
-        }
-
-        long purchasedQuantity = orderItemRepository.sumQuantityByUserAndDropAndStatus(
-                userId,
+    private void reservePurchaseLimit(Long userId, Drop drop, int quantity) {
+        dropUserPurchaseRepository.createCounterIfAbsent(drop.getId(), userId);
+        int increasedCount = dropUserPurchaseRepository.increaseWithinLimit(
                 drop.getId(),
-                OrderStatus.ORDERED
+                userId,
+                quantity,
+                drop.getPurchaseLimit()
         );
-        if (purchasedQuantity + quantity > drop.getPurchaseLimit()) {
+        if (increasedCount == 0) {
             throw new ServiceException(OrderErrorCode.PURCHASE_LIMIT_EXCEEDED);
         }
     }
