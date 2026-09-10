@@ -26,7 +26,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.mysql.MySQLContainer;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -53,7 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OrderServiceConcurrencyTest {
 
     private static final String TRIGGER_NAME = "fail_order_item_insert_for_test";
-    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")
+    private static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4")
             .withDatabaseName("dropit_test")
             .withUsername("test")
             .withPassword("test")

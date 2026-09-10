@@ -3,6 +3,7 @@ package com.dropit.product.concurrency;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.repository.DropRepository;
 import com.dropit.drop.service.DropService;
+import com.dropit.global.config.QuerydslConfig;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.global.storage.S3ImageService;
 import com.dropit.product.entity.Product;
@@ -16,8 +17,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.mysql.MySQLContainer;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,10 +41,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest
+@DataJpaTest(properties = {
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.open-in-view=false"
+})
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({ProductService.class, DropService.class, QuerydslConfig.class})
+@Transactional(propagation = Propagation.NOT_SUPPORTED)
 class ProductDropConcurrencyTest {
 
     private static final int REPEAT_COUNT = 100;
+    private static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4");
+
+    static {
+        MYSQL.start();
+    }
 
     @Autowired
     private ProductService productService;
@@ -55,6 +74,13 @@ class ProductDropConcurrencyTest {
 
     @MockitoBean
     private S3ImageService s3ImageService;
+
+    @DynamicPropertySource
+    static void registerDatasourceProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
+        registry.add("spring.datasource.username", MYSQL::getUsername);
+        registry.add("spring.datasource.password", MYSQL::getPassword);
+    }
 
     @AfterEach
     void cleanUp() {
