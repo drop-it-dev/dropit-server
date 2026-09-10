@@ -3,6 +3,7 @@ package com.dropit.order.service;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
 import com.dropit.drop.repository.DropRepository;
+import com.dropit.global.exception.CommonErrorCode;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.order.dto.request.OrderCreateRequest;
 import com.dropit.order.dto.request.OrderItemCreateRequest;
@@ -86,11 +87,15 @@ public class OrderService {
             Drop drop = dropRepository.findByIdForUpdate(orderItem.getDrop().getId())
                     .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
             drop.restoreStock(orderItem.getQuantity());
-            dropUserPurchaseRepository.decreaseConfirmedQuantity(
+            int decreasedCount = dropUserPurchaseRepository.decreaseConfirmedQuantity(
                     drop.getId(),
                     userId,
                     orderItem.getQuantity()
             );
+            if (decreasedCount != 1) {
+                // 구매 수량 카운터가 정상적으로 차감되지 않으면 취소 전체를 롤백한다.
+                throw new ServiceException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+            }
         }
     }
 

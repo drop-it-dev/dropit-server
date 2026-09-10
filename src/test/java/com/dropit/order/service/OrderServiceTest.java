@@ -2,6 +2,7 @@ package com.dropit.order.service;
 
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.repository.DropRepository;
+import com.dropit.global.exception.CommonErrorCode;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.order.dto.request.OrderCreateRequest;
 import com.dropit.order.dto.request.OrderItemCreateRequest;
@@ -167,6 +168,29 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.CANCELED, order.getStatus());
         assertEquals(10, drop.getRemainingQuantity());
+    }
+
+    @Test
+    @DisplayName("구매 수량 카운터를 복구하지 못하면 취소를 실패한다")
+    void failToCancelWhenPurchaseCounterIsNotDecreased() {
+        User buyer = createUser(1L, UserRole.USER);
+        Drop drop = createOpenDrop(10L, 100L, 10, 20, 2);
+        drop.decreaseStock(2, LocalDateTime.now());
+        Order order = new Order(buyer, new BigDecimal("94400"));
+        ReflectionTestUtils.setField(order, "id", 1000L);
+        OrderItem orderItem = new OrderItem(order, drop, "Limited Hoodie", new BigDecimal("59000"), 20, 2);
+
+        when(orderRepository.findByIdAndUser_IdForUpdate(1000L, 1L)).thenReturn(Optional.of(order));
+        when(orderItemRepository.findAllByOrder_IdOrderByIdAsc(1000L)).thenReturn(List.of(orderItem));
+        when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
+        when(dropUserPurchaseRepository.decreaseConfirmedQuantity(100L, 1L, 2)).thenReturn(0);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> orderService.cancel(1L, 1000L)
+        );
+
+        assertEquals(CommonErrorCode.INTERNAL_SERVER_ERROR, exception.getErrorCode());
     }
 
     private User createUser(Long id, UserRole role) {
