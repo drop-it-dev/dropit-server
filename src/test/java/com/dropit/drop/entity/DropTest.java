@@ -107,6 +107,38 @@ class DropTest {
     }
 
     @Test
+    @DisplayName("판매 후 초기 재고를 변경하면 판매 수량을 보존한 잔여 재고로 계산한다")
+    void recalculateRemainingQuantityAfterInitialQuantityUpdate() {
+        LocalDateTime now = LocalDateTime.of(2026, 9, 2, 12, 0);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 0, now.minusHours(1), now.plusHours(1));
+        drop.changeVisibility(true);
+        drop.decreaseStock(2, now);
+
+        drop.update(null, 5, null, null, null, null);
+
+        assertEquals(5, drop.getInitialQuantity());
+        assertEquals(3, drop.getRemainingQuantity());
+    }
+
+    @Test
+    @DisplayName("판매 수량보다 작은 초기 재고로 수정할 수 없다")
+    void rejectInitialQuantityBelowSoldQuantity() {
+        LocalDateTime now = LocalDateTime.of(2026, 9, 2, 12, 0);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 0, now.minusHours(1), now.plusHours(1));
+        drop.changeVisibility(true);
+        drop.decreaseStock(6, now);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> drop.update(null, 5, null, null, null, null)
+        );
+
+        assertEquals(DropErrorCode.INVALID_DROP_VALUE, exception.getErrorCode());
+        assertEquals(10, drop.getInitialQuantity());
+        assertEquals(4, drop.getRemainingQuantity());
+    }
+
+    @Test
     @DisplayName("부분 수정으로 판매 기간이 역전되면 INVALID_DROP_PERIOD를 반환하고 기존 기간을 보존한다")
     void rejectReversedPeriodOnPartialUpdate() {
         LocalDateTime openAt = LocalDateTime.now().plusDays(1);

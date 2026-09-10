@@ -45,7 +45,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.jpa.open-in-view=false"
+        "spring.jpa.open-in-view=false",
+        "spring.datasource.hikari.maximum-pool-size=32"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Import({OrderService.class, QuerydslConfig.class})
