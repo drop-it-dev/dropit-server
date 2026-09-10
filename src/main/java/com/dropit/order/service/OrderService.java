@@ -40,7 +40,7 @@ public class OrderService {
                 .orElseThrow(() -> new ServiceException(UserErrorCode.USER_NOT_FOUND));
 
         OrderItemCreateRequest itemRequest = request.items().getFirst();
-        Drop drop = dropRepository.findById(itemRequest.dropId())
+        Drop drop = dropRepository.findByIdForUpdate(itemRequest.dropId())
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now();
         validatePurchaseLimit(userId, drop, itemRequest.quantity());

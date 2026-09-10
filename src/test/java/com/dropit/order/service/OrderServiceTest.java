@@ -55,7 +55,7 @@ class OrderServiceTest {
         OrderCreateRequest request = new OrderCreateRequest(List.of(new OrderItemCreateRequest(100L, 2)));
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(buyer));
-        when(dropRepository.findById(100L)).thenReturn(Optional.of(drop));
+        when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
         when(orderItemRepository.sumQuantityByUserAndDropAndStatus(1L, 100L, OrderStatus.ORDERED))
                 .thenReturn(0L);
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
@@ -86,7 +86,7 @@ class OrderServiceTest {
         OrderCreateRequest request = new OrderCreateRequest(List.of(new OrderItemCreateRequest(100L, 2)));
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(buyer));
-        when(dropRepository.findById(100L)).thenReturn(Optional.of(drop));
+        when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
         when(orderItemRepository.sumQuantityByUserAndDropAndStatus(1L, 100L, OrderStatus.ORDERED))
                 .thenReturn(1L);
 
