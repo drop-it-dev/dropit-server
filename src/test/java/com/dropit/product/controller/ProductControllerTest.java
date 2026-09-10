@@ -387,6 +387,7 @@ class ProductControllerTest {
                         .value("판매 일정에서 사용 중인 상품은 삭제할 수 없습니다."));
 
         verify(productService).delete(1L, 100L);
+    }
 
     @Test
     @DisplayName("판매자는 상품 이미지를 업로드하면 200 상태와 서명된 이미지 URL을 반환한다")

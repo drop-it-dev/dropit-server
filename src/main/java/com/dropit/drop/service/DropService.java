@@ -30,7 +30,7 @@ public class DropService {
 
     @Transactional
     public Long save(Long userId, DropCreateRequest request) {
-        Product product = productRepository.findById(request.productId())
+        Product product = productRepository.findByIdForUpdate(request.productId())
                 .orElseThrow(() -> new ServiceException(ProductErrorCode.PRODUCT_NOT_FOUND));
 
         if (!Objects.equals(product.getSeller().getId(), userId)) {

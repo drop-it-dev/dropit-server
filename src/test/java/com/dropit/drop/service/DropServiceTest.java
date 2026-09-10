@@ -54,7 +54,7 @@ class DropServiceTest {
     void saveDropOwnedBySeller() {
         Product product = saveProduct(1L, 10L);
         DropCreateRequest request = saveRequest();
-        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(product));
         when(dropRepository.save(any(Drop.class))).thenAnswer(invocation -> {
             Drop drop = invocation.getArgument(0);
             ReflectionTestUtils.setField(drop, "id", 100L);
@@ -77,7 +77,7 @@ class DropServiceTest {
     @Test
     @DisplayName("존재하지 않는 상품으로 드랍을 생성할 수 없다")
     void rejectMissingProduct() {
-        when(productRepository.findById(10L)).thenReturn(Optional.empty());
+        when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.empty());
 
         ServiceException exception = assertThrows(
                 ServiceException.class,
@@ -92,7 +92,7 @@ class DropServiceTest {
     @DisplayName("다른 판매자의 상품으로 드랍을 생성할 수 없다")
     void rejectCreatingDropForAnotherSellersProduct() {
         Product product = saveProduct(1L, 10L);
-        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(product));
 
         ServiceException exception = assertThrows(
                 ServiceException.class,
