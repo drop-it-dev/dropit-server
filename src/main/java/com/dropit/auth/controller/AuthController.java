@@ -5,10 +5,14 @@ import com.dropit.auth.dto.request.ReissueRequest;
 import com.dropit.auth.dto.request.SignupRequest;
 import com.dropit.auth.dto.response.TokenResponse;
 import com.dropit.auth.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final SecurityContextLogoutHandler logoutHandler =
+            new SecurityContextLogoutHandler();
 
     @PostMapping("/signup")
     public ResponseEntity<Void> signup(
@@ -45,5 +51,16 @@ public class AuthController {
         return ResponseEntity.ok(
                 authService.reissue(request)
         );
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Authentication authentication
+    ) {
+        logoutHandler.logout(request, response, authentication);
+
+        return ResponseEntity.noContent().build();
     }
 }
