@@ -95,13 +95,15 @@ public class Drop extends BaseEntity {
         int updatedDiscountRate = discountRate != null ? discountRate : this.discountRate;
         int updatedPurchaseLimit = purchaseLimit != null ? purchaseLimit : this.purchaseLimit;
         BigDecimal updatedPrice = price != null ? price : this.price;
+        int soldQuantity = this.initialQuantity - this.remainingQuantity;
 
         validateSalesValues(updatedPrice, updatedInitialQuantity, updatedDiscountRate, updatedPurchaseLimit);
+        if (updatedInitialQuantity < soldQuantity) {
+            throw new ServiceException(DropErrorCode.INVALID_DROP_VALUE);
+        }
         validatePeriod(updatedOpenAt, updatedCloseAt);
 
-        if (this.remainingQuantity == this.initialQuantity) {
-            this.remainingQuantity = updatedInitialQuantity;
-        }
+        this.remainingQuantity = updatedInitialQuantity - soldQuantity;
         this.initialQuantity = updatedInitialQuantity;
         this.price = updatedPrice;
         this.discountRate = updatedDiscountRate;

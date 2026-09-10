@@ -107,6 +107,47 @@ class DropTest {
     }
 
     @Test
+    @DisplayName("판매 후 초기 재고를 변경해도 판매 수량을 보존한다")
+    void preserveSoldQuantityWhenInitialQuantityChanges() {
+        LocalDateTime now = LocalDateTime.of(2026, 9, 2, 12, 0);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 2, now.minusHours(1), now.plusHours(1));
+        drop.changeVisibility(true);
+        drop.decreaseStock(4, now);
+
+        drop.update(null, 8, null, null, null, null);
+        assertAll(
+                () -> assertEquals(8, drop.getInitialQuantity()),
+                () -> assertEquals(4, drop.getRemainingQuantity())
+        );
+
+        drop.update(null, 12, null, null, null, null);
+        assertAll(
+                () -> assertEquals(12, drop.getInitialQuantity()),
+                () -> assertEquals(8, drop.getRemainingQuantity())
+        );
+    }
+
+    @Test
+    @DisplayName("판매 수량보다 초기 재고를 작게 변경할 수 없다")
+    void rejectInitialQuantityBelowSoldQuantity() {
+        LocalDateTime now = LocalDateTime.of(2026, 9, 2, 12, 0);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 2, now.minusHours(1), now.plusHours(1));
+        drop.changeVisibility(true);
+        drop.decreaseStock(4, now);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> drop.update(null, 3, null, null, null, null)
+        );
+
+        assertEquals(DropErrorCode.INVALID_DROP_VALUE, exception.getErrorCode());
+        assertAll(
+                () -> assertEquals(10, drop.getInitialQuantity()),
+                () -> assertEquals(6, drop.getRemainingQuantity())
+        );
+    }
+
+    @Test
     @DisplayName("부분 수정으로 판매 기간이 역전되면 INVALID_DROP_PERIOD를 반환하고 기존 기간을 보존한다")
     void rejectReversedPeriodOnPartialUpdate() {
         LocalDateTime openAt = LocalDateTime.now().plusDays(1);
