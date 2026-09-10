@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.1'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.epages.restdocs-api-spec' version '0.20.1'
 }
 
 group = 'com.dropit'
@@ -9,6 +10,7 @@ version = '0.0.1-SNAPSHOT'
 description = 'dropit-server'
 
 def querydslVersion = '7.5'
+def restdocsApiSpecVersion = '0.20.1'
 
 java {
     toolchain {
@@ -51,6 +53,10 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
     testImplementation 'org.testcontainers:testcontainers-mysql'
 
+    testImplementation platform('org.springframework.restdocs:spring-restdocs-bom:4.0.1')
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+    testImplementation "com.epages:restdocs-api-spec-mockmvc:${restdocsApiSpecVersion}"
+
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
@@ -58,6 +64,22 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    outputs.dir(file('build/generated-snippets'))
+}
+
+openapi3 {
+    server = 'http://localhost:8080'
+    title = 'DROPIT API'
+    description = 'DROPIT API 문서입니다.'
+    version = project.version.toString()
+    format = 'yaml'
+    outputDirectory = 'build/api-spec'
+}
+
+afterEvaluate {
+    tasks.named('openapi3') {
+        dependsOn(tasks.named('test'))
+    }
 }
 
 tasks.register('dbUp', Exec) {
