@@ -1,6 +1,7 @@
 package com.dropit.drop.controller;
 
 import com.dropit.documentation.DocumentationTestSupport;
+import com.epages.restdocs.apispec.Schema;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.service.DropService;
@@ -59,6 +60,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isCreated())
                 .andDo(document("drops-create", resource(builder()
                         .tag("Drops").summary("드랍 생성").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("DropCreateRequest"))
                         .requestFields(
                                 fieldWithPath("productId").type(NUMBER).description("상품 ID"),
                                 fieldWithPath("price").type(NUMBER).description("판매 가격"),
@@ -85,7 +87,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                                 parameterWithName("page").description("페이지 번호"),
                                 parameterWithName("size").description("페이지 크기"),
                                 parameterWithName("sort").optional().description("정렬 조건")
-                        ).build())));
+                        ).responseSchema(new Schema("DropPageResponse")).build())));
     }
 
     @Test
@@ -94,7 +96,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/drops/{dropId}", 100L)))
                 .andExpect(status().isOk())
                 .andDo(document("drops-get", resource(builder()
-                        .tag("Drops").summary("드랍 단건 조회").requestHeaders(authorizationHeader()).responseFields(dropFields()).build())));
+                        .tag("Drops").summary("드랍 단건 조회").requestHeaders(authorizationHeader()).responseSchema(new Schema("DropResponse")).responseFields(dropFields()).build())));
     }
 
     @Test
@@ -105,6 +107,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                 .andDo(document("drops-get-by-creator", resource(builder()
                         .tag("Drops").summary("판매자 공개 드랍 목록 조회").requestHeaders(authorizationHeader())
                         .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
+                        .responseSchema(new Schema("DropPageResponse"))
                         .build())));
     }
 
@@ -116,6 +119,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                 .andDo(document("drops-get-my-drops", resource(builder()
                         .tag("Drops").summary("내 드랍 목록 조회").requestHeaders(authorizationHeader())
                         .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
+                        .responseSchema(new Schema("DropPageResponse"))
                         .build())));
     }
 
@@ -127,6 +131,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("drops-update", resource(builder()
                         .tag("Drops").summary("드랍 수정").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("DropUpdateRequest"))
                         .requestFields(
                                 fieldWithPath("price").optional().type(NUMBER).description("판매 가격"),
                                 fieldWithPath("initialQuantity").optional().type(NUMBER).description("초기 수량"),
@@ -134,7 +139,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                                 fieldWithPath("purchaseLimit").optional().type(NUMBER).description("구매 제한 수량"),
                                 fieldWithPath("openAt").optional().type(STRING).description("판매 시작 시각"),
                                 fieldWithPath("closeAt").optional().type(STRING).description("판매 종료 시각")
-                        ).responseFields(dropFields()).build())));
+                        ).responseSchema(new Schema("DropResponse")).responseFields(dropFields()).build())));
     }
 
     @Test
@@ -145,8 +150,9 @@ class DropDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("drops-change-visibility", resource(builder()
                         .tag("Drops").summary("드랍 공개 여부 변경").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("DropVisibilityUpdateRequest"))
                         .requestFields(fieldWithPath("visible").type(BOOLEAN).description("공개 여부"))
-                        .responseFields(dropFields()).build())));
+                        .responseSchema(new Schema("DropResponse")).responseFields(dropFields()).build())));
     }
 
     @Test

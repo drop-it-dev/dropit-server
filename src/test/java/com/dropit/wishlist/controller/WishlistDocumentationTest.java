@@ -1,6 +1,7 @@
 package com.dropit.wishlist.controller;
 
 import com.dropit.documentation.DocumentationTestSupport;
+import com.epages.restdocs.apispec.Schema;
 import com.dropit.product.entity.Product;
 import com.dropit.user.entity.User;
 import com.dropit.user.entity.UserRole;
@@ -48,7 +49,7 @@ class WishlistDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(post("/wishlists/{productId}", 10L)))
                 .andExpect(status().isOk())
                 .andDo(document("wishlists-add", resource(builder()
-                        .tag("Wishlists").summary("상품 찜하기").requestHeaders(authorizationHeader()).responseFields(wishlistFields()).build())));
+                        .tag("Wishlists").summary("상품 찜하기").requestHeaders(authorizationHeader()).responseSchema(new Schema("WishlistResponse")).responseFields(wishlistFields()).build())));
     }
 
     @Test
@@ -58,6 +59,7 @@ class WishlistDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("wishlists-get-me", resource(builder()
                         .tag("Wishlists").summary("내 찜 목록 조회").requestHeaders(authorizationHeader())
+                        .responseSchema(new Schema("WishlistList"))
                         .responseFields(
                                 fieldWithPath("[]").type(ARRAY).description("찜 목록"),
                                 fieldWithPath("[].id").type(NUMBER).description("찜 ID"),

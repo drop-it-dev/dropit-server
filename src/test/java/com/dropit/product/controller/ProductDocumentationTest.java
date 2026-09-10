@@ -60,6 +60,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isCreated())
                 .andDo(document("products-create", resource(builder()
                         .tag("Products").summary("상품 생성").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("ProductCreateRequest"))
                         .requestFields(fieldWithPath("name").description("상품명"), fieldWithPath("description").optional().description("상품 설명"))
                         .build())));
     }
@@ -71,6 +72,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("products-get", resource(builder()
                         .tag("Products").summary("상품 단건 조회").requestHeaders(authorizationHeader())
+                        .responseSchema(new Schema("ProductResponse"))
                         .responseFields(productFields()).build())));
     }
 
@@ -83,6 +85,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                         .tag("Products").summary("상품 목록 조회").description("상품 목록을 페이징하여 조회합니다.")
                         .requestHeaders(authorizationHeader())
                         .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
+                        .responseSchema(new Schema("ProductPageResponse"))
                         .responseFields(pageFields()).build())));
     }
 
@@ -94,6 +97,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                 .andDo(document("products-get-by-seller", resource(builder()
                         .tag("Products").summary("판매자 상품 목록 조회").requestHeaders(authorizationHeader())
                         .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
+                        .responseSchema(new Schema("ProductPageResponse"))
                         .responseFields(pageFields()).build())));
     }
 
@@ -105,7 +109,9 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("products-update", resource(builder()
                         .tag("Products").summary("상품 수정").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("ProductUpdateRequest"))
                         .requestFields(fieldWithPath("name").description("상품명"), fieldWithPath("description").optional().description("상품 설명"))
+                        .responseSchema(new Schema("ProductResponse"))
                         .responseFields(productFields()).build())));
     }
 
@@ -129,6 +135,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                 .andDo(document("products-upload-image", resource(builder()
                         .tag("Products").summary("상품 이미지 업로드").requestHeaders(authorizationHeader())
                         .requestSchema(new Schema("MultipartImage"))
+                        .responseSchema(new Schema("ProductResponse"))
                         .responseFields(productFields()).build()),
                         requestParts(partWithName("file").description("업로드할 이미지 파일"))));
     }

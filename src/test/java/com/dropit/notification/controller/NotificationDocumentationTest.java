@@ -1,6 +1,7 @@
 package com.dropit.notification.controller;
 
 import com.dropit.documentation.DocumentationTestSupport;
+import com.epages.restdocs.apispec.Schema;
 import com.dropit.notification.dto.response.NotificationResponse;
 import com.dropit.notification.entity.Notification;
 import com.dropit.notification.service.NotificationService;
@@ -47,6 +48,7 @@ class NotificationDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("notifications-get-me", resource(builder()
                         .tag("Notifications").summary("내 알림 목록 조회").requestHeaders(authorizationHeader())
+                        .responseSchema(new Schema("NotificationList"))
                         .responseFields(
                                 fieldWithPath("[]").type(ARRAY).description("알림 목록"),
                                 fieldWithPath("[].id").type(NUMBER).description("알림 ID"),
@@ -64,6 +66,7 @@ class NotificationDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("notifications-mark-read", resource(builder()
                         .tag("Notifications").summary("알림 읽음 처리").requestHeaders(authorizationHeader())
+                        .responseSchema(new Schema("NotificationResponse"))
                         .responseFields(
                                 fieldWithPath("id").type(NUMBER).description("알림 ID"),
                                 fieldWithPath("title").type(STRING).description("알림 제목"),

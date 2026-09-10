@@ -80,6 +80,33 @@ openapi3 {
 afterEvaluate {
     tasks.named('openapi3') {
         dependsOn(tasks.named('test'))
+        doLast {
+            File specFile = layout.buildDirectory.file('api-spec/openapi3.yaml').get().asFile
+            String spec = specFile.getText('UTF-8')
+
+            // restdocs-api-spec models a primitive JSON response as an empty object because
+            // its field-descriptor schema generator only supports object/array roots. Keep
+            // the endpoint contract accurate for the two Long response endpoints.
+            [
+                    [path: '/drops', method: 'post', status: '201'],
+                    [path: '/products', method: 'post', status: '201']
+            ].each { endpoint ->
+                String pattern = /(?s)(  ${endpoint.path}:.*?    ${endpoint.method}:.*?responses:\n        "${endpoint.status}":.*?application\/json:\n              schema:\n)                [$]ref: "[^"]+"\n/
+                spec = spec.replaceFirst(pattern, '$1                type: integer\n                format: int64\n')
+            }
+
+            // Primitive response correction leaves the generator's orphaned hash schema behind.
+            // Remove only those generated hash components; domain schema names come from tests.
+            spec = spec.replaceAll(/(?ms)^    [A-Za-z0-9]+-\d+:\n.*?(?=^    [A-Za-z0-9]+:|^  securitySchemes:)/, '')
+
+            String multipartSchema = /(?s)(    MultipartImage:\n)(?:      title: MultipartImage\n)?      type: object\n/
+            spec = spec.replaceFirst(
+                    multipartSchema,
+                    '$1      required:\n      - file\n      type: object\n      properties:\n        file:\n          type: string\n          format: binary\n'
+            )
+
+            specFile.setText(spec, 'UTF-8')
+        }
     }
 }
 

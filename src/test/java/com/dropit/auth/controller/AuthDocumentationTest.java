@@ -3,6 +3,7 @@ package com.dropit.auth.controller;
 import com.dropit.auth.dto.response.TokenResponse;
 import com.dropit.auth.service.AuthService;
 import com.dropit.documentation.DocumentationTestSupport;
+import com.epages.restdocs.apispec.Schema;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +43,7 @@ class AuthDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isCreated())
                 .andDo(document("auth-signup", resource(builder()
                         .tag("Auth").summary("회원가입").description("사용자 계정을 생성합니다.")
+                        .requestSchema(new Schema("SignupRequest"))
                         .requestFields(
                                 fieldWithPath("email").description("이메일 주소"),
                                 fieldWithPath("password").description("8자 이상의 비밀번호"),
@@ -59,6 +61,7 @@ class AuthDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("auth-login", resource(builder()
                         .tag("Auth").summary("로그인").description("이메일과 비밀번호로 로그인합니다.")
+                        .requestSchema(new Schema("LoginRequest"))
                         .requestFields(
                                 fieldWithPath("email").description("이메일 주소"),
                                 fieldWithPath("password").description("비밀번호")
@@ -66,7 +69,7 @@ class AuthDocumentationTest extends DocumentationTestSupport {
                         .responseFields(
                                 fieldWithPath("accessToken").type(STRING).description("접근 토큰"),
                                 fieldWithPath("refreshToken").type(STRING).description("갱신 토큰")
-                        ).build())));
+                        ).responseSchema(new Schema("AuthTokenResponse")).build())));
     }
 
     @Test
@@ -78,10 +81,11 @@ class AuthDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("auth-reissue", resource(builder()
                         .tag("Auth").summary("토큰 재발급").description("Refresh Token으로 토큰을 재발급합니다.")
+                        .requestSchema(new Schema("ReissueRequest"))
                         .requestFields(fieldWithPath("refreshToken").description("갱신 토큰"))
                         .responseFields(
                                 fieldWithPath("accessToken").type(STRING).description("접근 토큰"),
                                 fieldWithPath("refreshToken").type(STRING).description("갱신 토큰")
-                        ).build())));
+                        ).responseSchema(new Schema("AuthTokenResponse")).build())));
     }
 }

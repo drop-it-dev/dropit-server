@@ -57,11 +57,12 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isCreated())
                 .andDo(document("seller-profiles-create", resource(builder()
                         .tag("Seller Profiles").summary("판매자 프로필 생성").description("로그인한 판매자의 프로필을 생성합니다.").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("SellerProfileCreateRequest"))
                         .requestFields(
                                 fieldWithPath("description").optional().description("판매자 소개"),
                                 fieldWithPath("instagramUrl").optional().description("인스타그램 URL"),
                                 fieldWithPath("youtubeUrl").optional().description("유튜브 URL")
-                        ).responseFields(profileFields()).build())));
+                        ).responseSchema(new Schema("SellerProfileResponse")).responseFields(profileFields()).build())));
     }
 
     @Test
@@ -70,7 +71,7 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/seller-profiles/me")))
                 .andExpect(status().isOk())
                 .andDo(document("seller-profiles-get-me", resource(builder()
-                        .tag("Seller Profiles").summary("내 판매자 프로필 조회").requestHeaders(authorizationHeader()).responseSchema(new Schema("SellerProfile")).responseFields(profileFields()).build())));
+                        .tag("Seller Profiles").summary("내 판매자 프로필 조회").requestHeaders(authorizationHeader()).responseSchema(new Schema("SellerProfileResponse")).responseFields(profileFields()).build())));
     }
 
     @Test
@@ -79,7 +80,7 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/seller-profiles/{sellerProfileId}", 10L)))
                 .andExpect(status().isOk())
                 .andDo(document("seller-profiles-get", resource(builder()
-                        .tag("Seller Profiles").summary("판매자 프로필 조회").requestHeaders(authorizationHeader()).responseFields(profileFields()).build())));
+                        .tag("Seller Profiles").summary("판매자 프로필 조회").requestHeaders(authorizationHeader()).responseSchema(new Schema("SellerProfileResponse")).responseFields(profileFields()).build())));
     }
 
     @Test
@@ -91,11 +92,12 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("seller-profiles-update", resource(builder()
                         .tag("Seller Profiles").summary("판매자 프로필 수정").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("SellerProfileUpdateRequest"))
                         .requestFields(
                                 fieldWithPath("description").optional().description("판매자 소개"),
                                 fieldWithPath("instagramUrl").optional().description("인스타그램 URL"),
                                 fieldWithPath("youtubeUrl").optional().description("유튜브 URL")
-                        ).responseFields(profileFields()).build())));
+                        ).responseSchema(new Schema("SellerProfileResponse")).responseFields(profileFields()).build())));
     }
 
     @Test
@@ -110,7 +112,7 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
                 .andDo(document("seller-profiles-upload-image", resource(builder()
                         .tag("Seller Profiles").summary("판매자 프로필 이미지 업로드").description("프로필 이미지를 업로드합니다.").requestHeaders(authorizationHeader())
                         .requestSchema(new Schema("MultipartImage"))
-                        .responseFields(profileFields()).build()),
+                        .responseSchema(new Schema("SellerProfileResponse")).responseFields(profileFields()).build()),
                         requestParts(partWithName("file").description("업로드할 이미지 파일"))));
     }
 

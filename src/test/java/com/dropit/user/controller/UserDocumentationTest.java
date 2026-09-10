@@ -1,6 +1,7 @@
 package com.dropit.user.controller;
 
 import com.dropit.documentation.DocumentationTestSupport;
+import com.epages.restdocs.apispec.Schema;
 import com.dropit.user.entity.User;
 import com.dropit.user.entity.UserRole;
 import com.dropit.user.service.UserService;
@@ -44,6 +45,7 @@ class UserDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("users-get-me", resource(builder()
                         .tag("Users").summary("내 정보 조회").description("현재 로그인한 사용자의 정보를 조회합니다.").requestHeaders(authorizationHeader())
+                        .responseSchema(new Schema("UserResponse"))
                         .build())));
     }
 
@@ -56,6 +58,7 @@ class UserDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("users-update-me", resource(builder()
                         .tag("Users").summary("내 정보 수정").description("현재 로그인한 사용자의 이메일과 이름을 수정합니다.").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("UserUpdateRequest"))
                         .requestFields(
                                 fieldWithPath("email").optional().description("변경할 이메일 주소"),
                                 fieldWithPath("username").optional().description("변경할 사용자 이름")
@@ -67,7 +70,7 @@ class UserDocumentationTest extends DocumentationTestSupport {
                                 fieldWithPath("role").type(STRING).description("사용자 역할"),
                                 fieldWithPath("createdAt").type(STRING).optional().description("가입 시각"),
                                 fieldWithPath("updatedAt").type(STRING).optional().description("수정 시각")
-                        ).build())));
+                        ).responseSchema(new Schema("UserResponse")).build())));
     }
 
     @Test
@@ -78,6 +81,7 @@ class UserDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isNoContent())
                 .andDo(document("users-update-password", resource(builder()
                         .tag("Users").summary("비밀번호 변경").description("현재 비밀번호를 확인하고 새 비밀번호로 변경합니다.").requestHeaders(authorizationHeader())
+                        .requestSchema(new Schema("PasswordUpdateRequest"))
                         .requestFields(
                                 fieldWithPath("currentPassword").description("현재 비밀번호"),
                                 fieldWithPath("newPassword").description("새 비밀번호 (8자 이상)")
