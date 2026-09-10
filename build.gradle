@@ -91,15 +91,19 @@ afterEvaluate {
                     [path: '/drops', method: 'post', status: '201'],
                     [path: '/products', method: 'post', status: '201']
             ].each { endpoint ->
-                String pattern = /(?s)(  ${endpoint.path}:.*?    ${endpoint.method}:.*?responses:\n        "${endpoint.status}":.*?application\/json:\n              schema:\n)                [$]ref: "[^"]+"\n/
+                String pattern = /(?s)(\x20{2}${endpoint.path}:.*?\x20{4}${endpoint.method}:.*?responses:\n\x20{8}"${endpoint.status}":.*?application\/json:\n\x20{14}schema:\n)\x20{16}[$]ref: "[^"]+"\n/
                 spec = spec.replaceFirst(pattern, '$1                type: integer\n                format: int64\n')
             }
 
             // Primitive response correction leaves the generator's orphaned hash schema behind.
             // Remove only those generated hash components; domain schema names come from tests.
-            spec = spec.replaceAll(/(?ms)^    [A-Za-z0-9]+-\d+:\n.*?(?=^    [A-Za-z0-9]+:|^  securitySchemes:)/, '')
+            spec = spec.replaceAll(
+                    /(?ms)^\x20{4}[A-Za-z0-9]+-\d+:\n.*?(?=^\x20{4}[A-Za-z0-9]+:|^\x20{2}securitySchemes:)/,
+                    ''
+            )
 
-            String multipartSchema = /(?s)(    MultipartImage:\n)(?:      title: MultipartImage\n)?      type: object\n/
+            String multipartSchema =
+                    /(?s)(\x20{4}MultipartImage:\n)(?:\x20{6}title: MultipartImage\n)?\x20{6}type: object\n/
             spec = spec.replaceFirst(
                     multipartSchema,
                     '$1      required:\n      - file\n      type: object\n      properties:\n        file:\n          type: string\n          format: binary\n'
