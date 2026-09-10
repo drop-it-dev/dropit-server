@@ -144,7 +144,14 @@ public class ProductService {
 
     @Transactional
     public void delete(Long sellerId, Long productId) {
-        Product product = findOwnedProduct(sellerId, productId);
+        Product product = findOwnedProductForUpdate(sellerId, productId);
+
+        if (dropRepository.existsByProductId(productId)) {
+            throw new ServiceException(
+                    ProductErrorCode.PRODUCT_IN_USE_BY_DROP
+            );
+        }
+
         String imageKey = product.getImageUrl();
 
         productRepository.delete(product);
@@ -163,6 +170,28 @@ public class ProductService {
                         )
                 );
 
+        validateOwner(sellerId, product);
+
+        return product;
+    }
+
+    private Product findOwnedProductForUpdate(
+            Long sellerId,
+            Long productId
+    ) {
+        Product product = productRepository.findByIdForUpdate(productId)
+                .orElseThrow(() ->
+                        new ServiceException(
+                                ProductErrorCode.PRODUCT_NOT_FOUND
+                        )
+                );
+
+        validateOwner(sellerId, product);
+
+        return product;
+    }
+
+    private void validateOwner(Long sellerId, Product product) {
         if (!product.getSeller().getId().equals(sellerId)) {
             throw new ServiceException(
                     ProductErrorCode.PRODUCT_OWNER_REQUIRED
@@ -174,14 +203,6 @@ public class ProductService {
                     ProductErrorCode.SELLER_ROLE_REQUIRED
             );
         }
-
-        if (dropRepository.existsByProductId(productId)) {
-            throw new ServiceException(ProductErrorCode.PRODUCT_IN_USE_BY_DROP);
-        }
-
-        productRepository.delete(product);
-
-        return product;
     }
 
     private ProductResponse toResponse(Product product) {

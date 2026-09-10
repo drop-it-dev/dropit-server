@@ -371,7 +371,7 @@ class ProductServiceTest {
                 null
         );
         ReflectionTestUtils.setField(product, "id", productId);
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdForUpdate(productId)).thenReturn(Optional.of(product));
         when(dropRepository.existsByProductId(productId)).thenReturn(false);
 
         productService.delete(sellerId, productId);
@@ -390,7 +390,7 @@ class ProductServiceTest {
 
         Product product = new Product(seller, "Product", null, null);
         ReflectionTestUtils.setField(product, "id", productId);
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdForUpdate(productId)).thenReturn(Optional.of(product));
         when(dropRepository.existsByProductId(productId)).thenReturn(true);
 
         assertServiceException(
@@ -406,7 +406,7 @@ class ProductServiceTest {
     @DisplayName("존재하지 않는 상품은 삭제할 수 없다")
     void rejectDeletingMissingProduct() {
         Long productId = 999L;
-        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+        when(productRepository.findByIdForUpdate(productId)).thenReturn(Optional.empty());
 
         assertServiceException(
                 ProductErrorCode.PRODUCT_NOT_FOUND,
@@ -432,7 +432,7 @@ class ProductServiceTest {
                 null
         );
         ReflectionTestUtils.setField(product, "id", productId);
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdForUpdate(productId)).thenReturn(Optional.of(product));
 
         assertServiceException(
                 ProductErrorCode.PRODUCT_OWNER_REQUIRED,
