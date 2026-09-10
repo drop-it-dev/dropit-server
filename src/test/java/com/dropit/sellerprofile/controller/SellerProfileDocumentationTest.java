@@ -23,18 +23,19 @@ import com.epages.restdocs.apispec.Schema;
 import static org.springframework.restdocs.payload.JsonFieldType.NUMBER;
 import static org.springframework.restdocs.payload.JsonFieldType.STRING;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.springframework.restdocs.request.RequestDocumentation.partWithName;
 import static org.springframework.restdocs.request.RequestDocumentation.requestParts;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.multipart;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.patch;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(RestDocumentationExtension.class)
@@ -80,7 +81,9 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/seller-profiles/{sellerProfileId}", 10L)))
                 .andExpect(status().isOk())
                 .andDo(document("seller-profiles-get", resource(builder()
-                        .tag("Seller Profiles").summary("판매자 프로필 조회").requestHeaders(authorizationHeader()).responseSchema(new Schema("SellerProfileResponse")).responseFields(profileFields()).build())));
+                        .tag("Seller Profiles").summary("판매자 프로필 조회").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("sellerProfileId").description("판매자 프로필 ID"))
+                        .responseSchema(new Schema("SellerProfileResponse")).responseFields(profileFields()).build())));
     }
 
     @Test

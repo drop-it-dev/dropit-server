@@ -19,12 +19,13 @@ import static com.epages.restdocs.apispec.ResourceSnippetParameters.builder;
 import static org.springframework.restdocs.payload.JsonFieldType.NUMBER;
 import static org.springframework.restdocs.payload.JsonFieldType.STRING;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(RestDocumentationExtension.class)
@@ -101,7 +102,8 @@ class UserDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/users/{userId}", 2L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("users-delete-by-admin", resource(builder()
-                        .tag("Users").summary("사용자 삭제").description("관리자가 지정한 사용자를 삭제합니다.").requestHeaders(authorizationHeader()).build())));
+                        .tag("Users").summary("사용자 삭제").description("관리자가 지정한 사용자를 삭제합니다.").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("userId").description("사용자 ID")).build())));
     }
 
     private User user() {

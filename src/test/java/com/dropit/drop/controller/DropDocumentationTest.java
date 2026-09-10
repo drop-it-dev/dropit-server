@@ -35,10 +35,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.patch;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(RestDocumentationExtension.class)
@@ -96,7 +96,9 @@ class DropDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/drops/{dropId}", 100L)))
                 .andExpect(status().isOk())
                 .andDo(document("drops-get", resource(builder()
-                        .tag("Drops").summary("드랍 단건 조회").requestHeaders(authorizationHeader()).responseSchema(new Schema("DropResponse")).responseFields(dropFields()).build())));
+                        .tag("Drops").summary("드랍 단건 조회").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("dropId").description("드랍 ID"))
+                        .responseSchema(new Schema("DropResponse")).responseFields(dropFields()).build())));
     }
 
     @Test
@@ -106,6 +108,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("drops-get-by-creator", resource(builder()
                         .tag("Drops").summary("판매자 공개 드랍 목록 조회").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("sellerId").description("판매자 ID"))
                         .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
                         .responseSchema(new Schema("DropPageResponse"))
                         .build())));
@@ -131,6 +134,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("drops-update", resource(builder()
                         .tag("Drops").summary("드랍 수정").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("dropId").description("드랍 ID"))
                         .requestSchema(new Schema("DropUpdateRequest"))
                         .requestFields(
                                 fieldWithPath("price").optional().type(NUMBER).description("판매 가격"),
@@ -150,6 +154,7 @@ class DropDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("drops-change-visibility", resource(builder()
                         .tag("Drops").summary("드랍 공개 여부 변경").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("dropId").description("드랍 ID"))
                         .requestSchema(new Schema("DropVisibilityUpdateRequest"))
                         .requestFields(fieldWithPath("visible").type(BOOLEAN).description("공개 여부"))
                         .responseSchema(new Schema("DropResponse")).responseFields(dropFields()).build())));
@@ -160,7 +165,8 @@ class DropDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/drops/{dropId}", 100L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("drops-delete", resource(builder()
-                        .tag("Drops").summary("드랍 삭제").requestHeaders(authorizationHeader()).build())));
+                        .tag("Drops").summary("드랍 삭제").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("dropId").description("드랍 ID")).build())));
     }
 
     private DropResponse dropResponse() {

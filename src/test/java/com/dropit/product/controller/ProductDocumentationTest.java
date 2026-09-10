@@ -34,11 +34,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.multipart;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(RestDocumentationExtension.class)
@@ -72,6 +72,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("products-get", resource(builder()
                         .tag("Products").summary("상품 단건 조회").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("productId").description("상품 ID"))
                         .responseSchema(new Schema("ProductResponse"))
                         .responseFields(productFields()).build())));
     }
@@ -96,6 +97,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("products-get-by-seller", resource(builder()
                         .tag("Products").summary("판매자 상품 목록 조회").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("sellerId").description("판매자 ID"))
                         .queryParameters(parameterWithName("page").description("페이지 번호"), parameterWithName("size").description("페이지 크기"), parameterWithName("sort").optional().description("정렬 조건"))
                         .responseSchema(new Schema("ProductPageResponse"))
                         .responseFields(pageFields()).build())));
@@ -109,6 +111,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("products-update", resource(builder()
                         .tag("Products").summary("상품 수정").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("productId").description("상품 ID"))
                         .requestSchema(new Schema("ProductUpdateRequest"))
                         .requestFields(fieldWithPath("name").description("상품명"), fieldWithPath("description").optional().description("상품 설명"))
                         .responseSchema(new Schema("ProductResponse"))
@@ -120,7 +123,8 @@ class ProductDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/products/{productId}", 100L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("products-delete", resource(builder()
-                        .tag("Products").summary("상품 삭제").requestHeaders(authorizationHeader()).build())));
+                        .tag("Products").summary("상품 삭제").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("productId").description("상품 ID")).build())));
     }
 
     @Test
@@ -134,6 +138,7 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("products-upload-image", resource(builder()
                         .tag("Products").summary("상품 이미지 업로드").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("productId").description("상품 ID"))
                         .requestSchema(new Schema("MultipartImage"))
                         .responseSchema(new Schema("ProductResponse"))
                         .responseFields(productFields()).build()),

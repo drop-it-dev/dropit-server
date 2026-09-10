@@ -69,7 +69,7 @@ tasks.named('test') {
 }
 
 openapi3 {
-    server = 'http://localhost:8080'
+    server = '/'
     title = 'DROPIT API'
     description = 'DROPIT API 문서입니다.'
     version = project.version.toString()

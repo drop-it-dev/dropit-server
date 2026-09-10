@@ -24,10 +24,11 @@ import static org.springframework.restdocs.payload.JsonFieldType.BOOLEAN;
 import static org.springframework.restdocs.payload.JsonFieldType.NUMBER;
 import static org.springframework.restdocs.payload.JsonFieldType.STRING;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(RestDocumentationExtension.class)
@@ -66,6 +67,7 @@ class NotificationDocumentationTest extends DocumentationTestSupport {
                 .andExpect(status().isOk())
                 .andDo(document("notifications-mark-read", resource(builder()
                         .tag("Notifications").summary("알림 읽음 처리").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("notificationId").description("알림 ID"))
                         .responseSchema(new Schema("NotificationResponse"))
                         .responseFields(
                                 fieldWithPath("id").type(NUMBER).description("알림 ID"),

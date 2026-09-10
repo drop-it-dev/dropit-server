@@ -24,12 +24,13 @@ import static org.springframework.restdocs.payload.JsonFieldType.ARRAY;
 import static org.springframework.restdocs.payload.JsonFieldType.NUMBER;
 import static org.springframework.restdocs.payload.JsonFieldType.STRING;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(RestDocumentationExtension.class)
@@ -49,7 +50,9 @@ class WishlistDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(post("/wishlists/{productId}", 10L)))
                 .andExpect(status().isOk())
                 .andDo(document("wishlists-add", resource(builder()
-                        .tag("Wishlists").summary("상품 찜하기").requestHeaders(authorizationHeader()).responseSchema(new Schema("WishlistResponse")).responseFields(wishlistFields()).build())));
+                        .tag("Wishlists").summary("상품 찜하기").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("productId").description("상품 ID"))
+                        .responseSchema(new Schema("WishlistResponse")).responseFields(wishlistFields()).build())));
     }
 
     @Test
@@ -75,7 +78,8 @@ class WishlistDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(delete("/wishlists/{productId}", 10L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("wishlists-delete", resource(builder()
-                        .tag("Wishlists").summary("상품 찜 삭제").requestHeaders(authorizationHeader()).build())));
+                        .tag("Wishlists").summary("상품 찜 삭제").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("productId").description("상품 ID")).build())));
     }
 
     private WishlistResponse response() {

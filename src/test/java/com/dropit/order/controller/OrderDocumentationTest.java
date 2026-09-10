@@ -24,12 +24,13 @@ import static org.springframework.restdocs.payload.JsonFieldType.ARRAY;
 import static org.springframework.restdocs.payload.JsonFieldType.NUMBER;
 import static org.springframework.restdocs.payload.JsonFieldType.STRING;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(RestDocumentationExtension.class)
@@ -83,7 +84,9 @@ class OrderDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(get("/orders/{orderId}", 1000L)))
                 .andExpect(status().isOk())
                 .andDo(document("orders-get", resource(builder()
-                        .tag("Orders").summary("내 주문 상세 조회").requestHeaders(authorizationHeader()).responseSchema(new Schema("OrderResponse")).responseFields(orderFields()).build())));
+                        .tag("Orders").summary("내 주문 상세 조회").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("orderId").description("주문 ID"))
+                        .responseSchema(new Schema("OrderResponse")).responseFields(orderFields()).build())));
     }
 
     @Test
@@ -91,7 +94,8 @@ class OrderDocumentationTest extends DocumentationTestSupport {
         mockMvc.perform(authenticated(post("/orders/{orderId}/cancel", 1000L)))
                 .andExpect(status().isNoContent())
                 .andDo(document("orders-cancel", resource(builder()
-                        .tag("Orders").summary("주문 취소").description("현재 사용자의 주문을 취소합니다.").requestHeaders(authorizationHeader()).build())));
+                        .tag("Orders").summary("주문 취소").description("현재 사용자의 주문을 취소합니다.").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("orderId").description("주문 ID")).build())));
     }
 
     private OrderResponse orderResponse() {
