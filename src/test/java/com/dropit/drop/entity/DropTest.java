@@ -5,13 +5,12 @@ import com.dropit.global.exception.ServiceException;
 import com.dropit.product.entity.Product;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 class DropTest {
@@ -45,18 +44,30 @@ class DropTest {
         LocalDateTime openAt = LocalDateTime.now().plusDays(1);
 
         assertAll(
-                () -> assertThrows(ServiceException.class,
-                        () -> new Drop(product, BigDecimal.ZERO, 10, 20, 0, openAt, openAt.plusDays(1))),
-                () -> assertThrows(ServiceException.class,
-                        () -> new Drop(product, new BigDecimal("59000"), 0, 20, 0, openAt, openAt.plusDays(1))),
-                () -> assertThrows(ServiceException.class,
-                        () -> new Drop(product, new BigDecimal("59000"), 10, 101, 0, openAt, openAt.plusDays(1))),
-                () -> assertThrows(ServiceException.class,
-                        () -> new Drop(product, new BigDecimal("59000"), 10, 20, -1, openAt, openAt.plusDays(1))),
-                () -> assertThrows(ServiceException.class,
-                        () -> new Drop(product, new BigDecimal("59000.50"), 10, 20, 0, openAt, openAt.plusDays(1))),
-                () -> assertThrows(ServiceException.class,
-                        () -> new Drop(product, new BigDecimal("10000000000000"), 10, 20, 0, openAt, openAt.plusDays(1)))
+                () -> assertInvalidSalesValue(() -> new Drop(product, null, 10, 20, 0, openAt, openAt.plusDays(1))),
+                () -> assertInvalidSalesValue(() -> new Drop(product, new BigDecimal("-1"), 10, 20, 0, openAt, openAt.plusDays(1))),
+                () -> assertInvalidSalesValue(() -> new Drop(product, BigDecimal.ZERO, 10, 20, 0, openAt, openAt.plusDays(1))),
+                () -> assertInvalidSalesValue(() -> new Drop(product, new BigDecimal("59000"), 0, 20, 0, openAt, openAt.plusDays(1))),
+                () -> assertInvalidSalesValue(() -> new Drop(product, new BigDecimal("59000"), 10, -1, 0, openAt, openAt.plusDays(1))),
+                () -> assertInvalidSalesValue(() -> new Drop(product, new BigDecimal("59000"), 10, 101, 0, openAt, openAt.plusDays(1))),
+                () -> assertInvalidSalesValue(() -> new Drop(product, new BigDecimal("59000"), 10, 20, -1, openAt, openAt.plusDays(1))),
+                () -> assertInvalidSalesValue(() -> new Drop(product, new BigDecimal("59000.50"), 10, 20, 0, openAt, openAt.plusDays(1))),
+                () -> assertInvalidSalesValue(() -> new Drop(product, new BigDecimal("10000000000000"), 10, 20, 0, openAt, openAt.plusDays(1)))
+        );
+    }
+
+    @Test
+    @DisplayName("할인율 0과 100, 최대 가격은 유효한 판매 값으로 허용한다")
+    void acceptSalesValueBoundariesOnCreate() {
+        LocalDateTime openAt = LocalDateTime.now().plusDays(1);
+
+        Drop noDiscount = new Drop(product, new BigDecimal("9999999999999"), 10, 0, 0, openAt, openAt.plusDays(1));
+        Drop fullDiscount = new Drop(product, new BigDecimal("59000"), 10, 100, 0, openAt, openAt.plusDays(1));
+
+        assertAll(
+                () -> assertEquals(new BigDecimal("9999999999999"), noDiscount.getPrice()),
+                () -> assertEquals(0, noDiscount.getDiscountRate()),
+                () -> assertEquals(100, fullDiscount.getDiscountRate())
         );
     }
 
@@ -67,7 +78,7 @@ class DropTest {
         LocalDateTime closeAt = openAt.plusDays(1);
         Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 2, openAt, closeAt);
 
-        assertThrows(
+        ServiceException exception = assertThrows(
                 ServiceException.class,
                 () -> drop.update(
                         new BigDecimal("49000"),
@@ -79,15 +90,37 @@ class DropTest {
                 )
         );
 
-        assertAll(
-                () -> assertEquals(new BigDecimal("59000"), drop.getPrice()),
-                () -> assertEquals(10, drop.getInitialQuantity()),
-                () -> assertEquals(10, drop.getRemainingQuantity()),
-                () -> assertEquals(20, drop.getDiscountRate()),
-                () -> assertEquals(2, drop.getPurchaseLimit()),
-                () -> assertEquals(openAt, drop.getOpenAt()),
-                () -> assertEquals(closeAt, drop.getCloseAt())
+        assertEquals(DropErrorCode.INVALID_DROP_VALUE, exception.getErrorCode());
+        assertDropValues(drop, new BigDecimal("59000"), 10, 10, 20, 2, openAt, closeAt);
+    }
+
+    @Test
+    @DisplayName("모든 값이 null인 부분 수정은 기존 값을 유지한다")
+    void preserveAllValuesWhenUpdateIsEmpty() {
+        LocalDateTime openAt = LocalDateTime.now().plusDays(1);
+        LocalDateTime closeAt = openAt.plusDays(1);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 2, openAt, closeAt);
+
+        drop.update(null, null, null, null, null, null);
+
+        assertDropValues(drop, new BigDecimal("59000"), 10, 10, 20, 2, openAt, closeAt);
+    }
+
+    @Test
+    @DisplayName("부분 수정으로 판매 기간이 역전되면 INVALID_DROP_PERIOD를 반환하고 기존 기간을 보존한다")
+    void rejectReversedPeriodOnPartialUpdate() {
+        LocalDateTime openAt = LocalDateTime.now().plusDays(1);
+        LocalDateTime closeAt = openAt.plusDays(1);
+        Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 2, openAt, closeAt);
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> drop.update(null, null, null, null, closeAt.plusDays(1), null)
         );
+
+        assertEquals(DropErrorCode.INVALID_DROP_PERIOD, exception.getErrorCode());
+        assertEquals(openAt, drop.getOpenAt());
+        assertEquals(closeAt, drop.getCloseAt());
     }
 
     @Test
@@ -108,7 +141,7 @@ class DropTest {
         LocalDateTime openAt = LocalDateTime.now().plusDays(1);
         Drop drop = new Drop(product, new BigDecimal("59000"), 10, 20, 0, openAt, openAt.plusDays(1));
 
-        assertEquals(false, drop.isVisible());
+        assertFalse(drop.isVisible());
     }
 
     @Test
@@ -119,7 +152,7 @@ class DropTest {
 
         drop.changeVisibility(true);
 
-        assertEquals(true, drop.isVisible());
+        assertTrue(drop.isVisible());
     }
 
     @Test
@@ -127,12 +160,43 @@ class DropTest {
     void rejectInvalidDropPeriodWithDropErrorCode() {
         LocalDateTime openAt = LocalDateTime.now().plusDays(1);
 
-        ServiceException exception = assertThrows(
-                ServiceException.class,
-                () -> new Drop(product, new BigDecimal("59000"), 10, 20, 2, openAt, openAt)
+        assertAll(
+                () -> assertInvalidDropPeriod(() -> new Drop(product, new BigDecimal("59000"), 10, 20, 2, openAt, openAt)),
+                () -> assertInvalidDropPeriod(() -> new Drop(product, new BigDecimal("59000"), 10, 20, 2, openAt.plusDays(1), openAt)),
+                () -> assertInvalidDropPeriod(() -> new Drop(product, new BigDecimal("59000"), 10, 20, 2, null, openAt)),
+                () -> assertInvalidDropPeriod(() -> new Drop(product, new BigDecimal("59000"), 10, 20, 2, openAt, null))
         );
+    }
 
+    private void assertInvalidSalesValue(Executable executable) {
+        ServiceException exception = assertThrows(ServiceException.class, executable);
+        assertEquals(DropErrorCode.INVALID_DROP_VALUE, exception.getErrorCode());
+    }
+
+    private void assertInvalidDropPeriod(Executable executable) {
+        ServiceException exception = assertThrows(ServiceException.class, executable);
         assertEquals(DropErrorCode.INVALID_DROP_PERIOD, exception.getErrorCode());
+    }
+
+    private void assertDropValues(
+            Drop drop,
+            BigDecimal price,
+            int initialQuantity,
+            int remainingQuantity,
+            int discountRate,
+            int purchaseLimit,
+            LocalDateTime openAt,
+            LocalDateTime closeAt
+    ) {
+        assertAll(
+                () -> assertEquals(price, drop.getPrice()),
+                () -> assertEquals(initialQuantity, drop.getInitialQuantity()),
+                () -> assertEquals(remainingQuantity, drop.getRemainingQuantity()),
+                () -> assertEquals(discountRate, drop.getDiscountRate()),
+                () -> assertEquals(purchaseLimit, drop.getPurchaseLimit()),
+                () -> assertEquals(openAt, drop.getOpenAt()),
+                () -> assertEquals(closeAt, drop.getCloseAt())
+        );
     }
 
     @Test
