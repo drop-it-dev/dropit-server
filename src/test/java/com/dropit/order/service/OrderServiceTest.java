@@ -22,7 +22,6 @@ import com.dropit.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -36,9 +35,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
@@ -78,6 +75,8 @@ class OrderServiceTest {
         assertEquals(new BigDecimal("59000"), response.items().getFirst().unitPrice());
         assertEquals(20, response.items().getFirst().discountRate());
         assertEquals(new BigDecimal("94400"), response.items().getFirst().itemTotalPrice());
+        verify(dropUserPurchaseRepository, times(1)).createCounterIfAbsent(100L, 1L);
+        verify(dropUserPurchaseRepository, times(1)).increaseWithinLimit(100L, 1L, 2, 2);
     }
 
     @Test
@@ -168,6 +167,7 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.CANCELED, order.getStatus());
         assertEquals(10, drop.getRemainingQuantity());
+        verify(dropUserPurchaseRepository, times(1)).decreaseConfirmedQuantity(100L, 1L, 2);
     }
 
     @Test

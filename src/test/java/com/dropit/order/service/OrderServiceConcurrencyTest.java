@@ -7,6 +7,7 @@ import com.dropit.order.dto.request.OrderCreateRequest;
 import com.dropit.order.dto.request.OrderItemCreateRequest;
 import com.dropit.order.entity.DropUserPurchase;
 import com.dropit.order.entity.OrderItem;
+import com.dropit.order.exception.OrderErrorCode;
 import com.dropit.order.repository.DropUserPurchaseRepository;
 import com.dropit.order.repository.OrderItemRepository;
 import com.dropit.order.repository.OrderRepository;
@@ -234,6 +235,9 @@ class OrderServiceConcurrencyTest {
                         orderService.create(buyerId, orderRequest(fixture.drop().getId(), quantity));
                         return true;
                     } catch (com.dropit.global.exception.ServiceException exception) {
+                        if (exception.getErrorCode() != OrderErrorCode.PURCHASE_LIMIT_EXCEEDED) {
+                            throw exception;
+                        }
                         return false;
                     }
                 }));
