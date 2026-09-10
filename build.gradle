@@ -124,6 +124,12 @@ tasks.named('bootJar') {
     dependsOn(copyOpenApiToResources)
 }
 
+tasks.register('openApiDocs') {
+    group = 'development'
+    description = 'OpenAPI 명세를 생성하고 검증한 뒤 정적 리소스로 복사합니다.'
+    dependsOn(copyOpenApiToResources)
+}
+
 tasks.register('dbUp', Exec) {
     group = 'development'
     description = '로컬 DB 컨테이너를 실행합니다.'
