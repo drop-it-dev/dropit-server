@@ -14,7 +14,13 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "drops")
+@Table(
+        name = "drops",
+        indexes = @Index(
+                name = "idx_drops_public_closing",
+                columnList = "visible, close_at, id DESC, open_at, remaining_quantity, product_id"
+        )
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Drop extends BaseEntity {
 

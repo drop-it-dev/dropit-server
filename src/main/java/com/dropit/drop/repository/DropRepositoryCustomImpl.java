@@ -7,6 +7,7 @@ import com.dropit.drop.entity.DropStatus;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.querydsl.jpa.impl.JPAQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -31,10 +32,13 @@ public class DropRepositoryCustomImpl implements DropRepositoryCustom {
     ) {
         LocalDateTime now = LocalDateTime.now();
 
-        List<Drop> content = queryFactory
-                .selectFrom(drop)
-                .join(drop.product, product).fetchJoin()
-                .join(product.seller, user).fetchJoin()
+        // 먼저 페이지에 포함할 ID만 조회해 대량 fetch join 이후 정렬을 피한다.
+        JPAQuery<Long> idQuery = queryFactory.select(drop.id).from(drop);
+        boolean hasKeyword = condition.keyword() != null && !condition.keyword().isBlank();
+        if (hasKeyword) {
+            idQuery.join(drop.product, product).join(product.seller, user);
+        }
+        List<Long> ids = idQuery
                 .where(
                         drop.visible.isTrue(),
                         keywordContains(condition.keyword()),
@@ -45,11 +49,23 @@ public class DropRepositoryCustomImpl implements DropRepositoryCustom {
                 .limit(pageable.getPageSize())
                 .fetch();
 
-        Long total = queryFactory
+        List<Drop> content = ids.isEmpty() ? List.of() : queryFactory
+                .selectFrom(drop)
+                .join(drop.product, product).fetchJoin()
+                .join(product.seller, user).fetchJoin()
+                .where(drop.id.in(ids))
+                .orderBy(orderSpecifiers(condition.sortType()))
+                .fetch();
+
+        // 검색어가 없으면 필터에 필요한 컬럼이 모두 Drop에 있다.
+        // 필수 FK 관계이므로 count에서 상품/판매자 조인을 생략할 수 있다.
+        JPAQuery<Long> countQuery = queryFactory
                 .select(drop.count())
-                .from(drop)
-                .join(drop.product, product)
-                .join(product.seller, user)
+                .from(drop);
+        if (hasKeyword) {
+            countQuery.join(drop.product, product).join(product.seller, user);
+        }
+        Long total = countQuery
                 .where(
                         drop.visible.isTrue(),
                         keywordContains(condition.keyword()),
