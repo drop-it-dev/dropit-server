@@ -42,3 +42,5 @@ out/
 !.env.example
 !.env.example.DS_Store
 performance/reports/*.html
+performance/results/raw/
+performance/results/*.zip

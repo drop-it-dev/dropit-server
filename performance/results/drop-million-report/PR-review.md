@@ -74,15 +74,10 @@ selectFrom(drop).join(drop.product, product).fetchJoin()
 
 - [x] Drop 테스트 43개 통과, 실패 0개, 오류 0개
 - [x] MySQL 통합 테스트 2개 포함: 키워드 검색 페이징·빈 페이지·전체 개수와 기본 조회의 기존 조인 쿼리 결과 일치
-- [x] k6 세 단계 원본 결과 저장
+- [x] k6 세 단계 측정 완료 (원본 JSON은 로컬 생성물로 Git 제외)
 - [ ] 최종 p95 2초 목표 미달
 
 ## 💡 관련 이슈
 
 - 이슈 번호 미확인. 실제 번호를 확인한 뒤 연결합니다.
 
-## GitHub에 이미지 올리기
-
-PR 편집기에 `comparison.png`와 `grafana.png`를 드래그하면 GitHub 이미지 주소가 생성됩니다. 본문 이미지 경로를 해당 주소로 바꾸면 됩니다. 로컬 C: 경로는 GitHub에서 표시되지 않습니다.
-
-![Grafana 측정 화면](grafana.png)
