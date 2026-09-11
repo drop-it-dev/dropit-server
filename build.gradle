@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.1'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.epages.restdocs-api-spec' version '0.20.1'
 }
 
 group = 'com.dropit'
@@ -9,6 +10,7 @@ version = '0.0.1-SNAPSHOT'
 description = 'dropit-server'
 
 def querydslVersion = '7.5'
+def restdocsApiSpecVersion = '0.20.1'
 
 java {
     toolchain {
@@ -28,6 +30,7 @@ dependencies {
     implementation "io.github.openfeign.querydsl:querydsl-jpa:${querydslVersion}"
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.webjars:swagger-ui:5.32.11'
 
     implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:4.1.0')
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
@@ -51,6 +54,10 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
     testImplementation 'org.testcontainers:testcontainers-mysql'
 
+    testImplementation platform('org.springframework.restdocs:spring-restdocs-bom:4.0.1')
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+    testImplementation "com.epages:restdocs-api-spec-mockmvc:${restdocsApiSpecVersion}"
+
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
@@ -58,6 +65,100 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    outputs.dir(file('build/generated-snippets'))
+}
+
+openapi3 {
+    server = '/'
+    title = 'DROPIT API'
+    description = 'DROPIT API 문서입니다.'
+    version = project.version.toString()
+    format = 'yaml'
+    outputDirectory = 'build/api-spec'
+}
+
+afterEvaluate {
+    tasks.named('openapi3') {
+        dependsOn(tasks.named('test'))
+        doLast {
+            File specFile = layout.buildDirectory.file('api-spec/openapi3.yaml').get().asFile
+            String spec = specFile.getText('UTF-8')
+
+            // restdocs-api-spec models a primitive JSON response as an empty object because
+            // its field-descriptor schema generator only supports object/array roots. Keep
+            // the endpoint contract accurate for the two Long response endpoints.
+            [
+                    [path: '/drops', method: 'post', status: '201'],
+                    [path: '/products', method: 'post', status: '201']
+            ].each { endpoint ->
+                String pattern = /(?s)(\x20{2}${endpoint.path}:.*?\x20{4}${endpoint.method}:.*?responses:\n\x20{8}"${endpoint.status}":.*?application\/json:\n\x20{14}schema:\n)\x20{16}[$]ref: "[^"]+"\n/
+                spec = spec.replaceFirst(pattern, '$1                type: integer\n                format: int64\n')
+            }
+
+            // Primitive response correction leaves the generator's orphaned hash schema behind.
+            // Remove only those generated hash components; domain schema names come from tests.
+            spec = spec.replaceAll(
+                    /(?ms)^\x20{4}[A-Za-z0-9]+-\d+:\n.*?(?=^\x20{4}[A-Za-z0-9]+:|^\x20{2}securitySchemes:)/,
+                    ''
+            )
+
+            String multipartSchema =
+                    /(?s)(\x20{4}MultipartImage:\n)(?:\x20{6}title: MultipartImage\n)?\x20{6}type: object\n/
+            spec = spec.replaceFirst(
+                    multipartSchema,
+                    '$1      required:\n      - file\n      type: object\n      properties:\n        file:\n          type: string\n          format: binary\n'
+            )
+
+            specFile.setText(spec, 'UTF-8')
+        }
+    }
+}
+
+def validateOpenApiSpec = tasks.register('validateOpenApiSpec') {
+    group = 'documentation'
+    description = '생성된 OpenAPI 명세가 하나 이상의 API 경로를 포함하는지 검증합니다.'
+    dependsOn(tasks.named('openapi3'))
+    doLast {
+        File specFile = layout.buildDirectory.file('api-spec/openapi3.yaml').get().asFile
+        if (!specFile.isFile() || specFile.length() == 0) {
+            throw new GradleException(
+                    "OpenAPI 명세가 생성되지 않았습니다: ${specFile}. ./gradlew openapi3을 실행해 문서화 테스트를 먼저 수행하세요."
+            )
+        }
+
+        String spec = specFile.getText('UTF-8')
+        boolean hasPathsSection = spec.readLines().any { it.trim() == 'paths:' }
+        boolean hasDocumentedPath = spec.readLines().any { it ==~ /^\s{2,}\/\S+:\s*$/ }
+        if (!hasPathsSection || !hasDocumentedPath) {
+            throw new GradleException(
+                    "OpenAPI 명세에 문서화된 API 경로가 없습니다: ${specFile}. -x test를 사용하지 말고 ./gradlew openapi3을 실행하세요."
+            )
+        }
+    }
+}
+
+def copyOpenApiToResources = tasks.register('copyOpenApiToResources', Copy) {
+    dependsOn(validateOpenApiSpec)
+    from(layout.buildDirectory.file('api-spec/openapi3.yaml'))
+    into(layout.buildDirectory.dir('resources/main/static/openapi'))
+}
+
+tasks.named('bootRun') {
+    dependsOn(copyOpenApiToResources)
+}
+
+tasks.named('resolveMainClassName') {
+    dependsOn(copyOpenApiToResources)
+}
+
+tasks.named('bootJar') {
+    dependsOn(copyOpenApiToResources)
+}
+
+tasks.register('openApiDocs') {
+    group = 'development'
+    description = 'OpenAPI 명세를 생성하고 검증한 뒤 정적 리소스로 복사합니다.'
+    dependsOn(copyOpenApiToResources)
 }
 
 tasks.register('dbUp', Exec) {
