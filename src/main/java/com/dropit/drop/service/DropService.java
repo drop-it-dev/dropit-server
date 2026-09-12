@@ -64,7 +64,7 @@ public class DropService {
 
     @Transactional(readOnly = true)
     public DropResponse getOne(Long dropId) {
-        Drop drop = dropRepository.findById(dropId)
+        Drop drop = dropRepository.findDetailById(dropId)
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
 
         if (!drop.isVisible()) {

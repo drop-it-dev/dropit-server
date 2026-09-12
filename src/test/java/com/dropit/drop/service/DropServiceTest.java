@@ -107,7 +107,7 @@ class DropServiceTest {
     @DisplayName("공개된 드랍 상세 정보를 조회할 수 있다")
     void getOneDrop() {
         Drop drop = saveDrop(1L, 10L, 100L, LocalDateTime.now().plusDays(1));
-        when(dropRepository.findById(100L)).thenReturn(Optional.of(drop));
+        when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(drop));
 
         DropResponse response = dropService.getOne(100L);
 
@@ -216,7 +216,7 @@ class DropServiceTest {
                 LocalDateTime.now().plusDays(1),
                 LocalDateTime.now().plusDays(2)
         );
-        when(dropRepository.findById(100L)).thenReturn(Optional.of(hiddenDrop));
+        when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(hiddenDrop));
 
         ServiceException exception = assertThrows(
                 ServiceException.class,
