@@ -11,7 +11,9 @@ param(
     [int]$ConcurrentUsers = 10000,
 
     [ValidateSet('Warm', 'Cold')]
-    [string]$CacheMode = 'Warm'
+    [string]$CacheMode = 'Warm',
+
+    [string]$TargetBaseUrl
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,6 +54,10 @@ $authUsername = $settings['AUTH_USERNAME']
 if (-not $healthCheckUrl -or -not $baseUrl -or
     -not $authEmail -or -not $authPassword -or -not $authUsername) {
     throw 'Required performance environment values are missing.'
+}
+
+if ($TargetBaseUrl) {
+    $baseUrl = $TargetBaseUrl.TrimEnd('/')
 }
 
 $loginBody = @{
