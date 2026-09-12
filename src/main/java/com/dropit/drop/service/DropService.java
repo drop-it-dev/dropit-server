@@ -8,11 +8,14 @@ import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
 import com.dropit.drop.repository.DropRepository;
+import com.dropit.global.config.RedisCacheConfig;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.product.entity.Product;
 import com.dropit.product.exception.ProductErrorCode;
 import com.dropit.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -63,6 +66,7 @@ public class DropService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId", sync = true)
     public DropResponse getOne(Long dropId) {
         Drop drop = dropRepository.findDetailById(dropId)
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
@@ -101,6 +105,7 @@ public class DropService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId")
     public DropResponse update(Long sellerId, Long dropId, DropUpdateRequest request) {
         Drop drop = dropRepository.findById(dropId)
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
@@ -124,6 +129,7 @@ public class DropService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId")
     public DropResponse changeVisibility(Long sellerId, Long dropId, DropVisibilityUpdateRequest request) {
         Drop drop = dropRepository.findById(dropId)
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
@@ -138,6 +144,7 @@ public class DropService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId")
     public void delete(Long sellerId, Long dropId) {
         Drop drop = dropRepository.findById(dropId)
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
