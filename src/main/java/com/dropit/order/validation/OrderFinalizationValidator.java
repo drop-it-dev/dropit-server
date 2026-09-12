@@ -5,11 +5,11 @@ import com.dropit.global.exception.ServiceException;
 import com.dropit.order.dto.request.OrderFinalizationRequest;
 import com.dropit.order.entity.OrderRequest;
 import com.dropit.order.exception.OrderErrorCode;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OrderFinalizationValidator {
-
-    private OrderFinalizationValidator() {
-    }
 
     public static void validate(OrderFinalizationRequest input) {
         if (input == null
