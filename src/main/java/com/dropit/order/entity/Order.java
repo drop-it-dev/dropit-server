@@ -33,6 +33,9 @@ public class Order extends BaseEntity {
     @Column(nullable = false)
     private OrderStatus status;
 
+    @OneToOne(mappedBy = "order")
+    private OrderRequest orderRequest;
+
     public Order(User user, BigDecimal totalPrice) {
         this.user = user;
         this.totalPrice = totalPrice;

@@ -152,6 +152,10 @@ public class Drop extends BaseEntity {
         this.visible = visible;
     }
 
+    public void restoreStock(int quantity) {
+        this.remainingQuantity += quantity;
+    }
+
     public void decreaseStock(int quantity, LocalDateTime now) {
         if (quantity <= 0) {
             throw new ServiceException(DropErrorCode.INVALID_DROP_VALUE);
@@ -166,7 +170,17 @@ public class Drop extends BaseEntity {
         this.remainingQuantity -= quantity;
     }
 
-    public void restoreStock(int quantity) {
-        this.remainingQuantity += quantity;
+    public void decreaseStockForFinalization(int quantity) {
+        validateStockForFinalization(quantity);
+        this.remainingQuantity -= quantity;
+    }
+
+    public void validateStockForFinalization(int quantity) {
+        if (quantity <= 0) {
+            throw new ServiceException(DropErrorCode.INVALID_DROP_VALUE);
+        }
+        if (remainingQuantity < quantity) {
+            throw new ServiceException(DropErrorCode.INSUFFICIENT_STOCK);
+        }
     }
 }
