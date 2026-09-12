@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Before', 'After')]
+    [ValidateSet('Before', 'Query', 'After')]
     [string]$Phase,
 
     [Parameter(Mandatory = $true)]
