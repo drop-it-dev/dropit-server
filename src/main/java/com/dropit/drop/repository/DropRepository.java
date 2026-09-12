@@ -14,6 +14,15 @@ import java.util.Optional;
 
 public interface DropRepository extends JpaRepository<Drop, Long>, DropRepositoryCustom {
 
+    @Query("""
+            select d
+            from Drop d
+            join fetch d.product p
+            join fetch p.seller
+            where d.id = :dropId
+            """)
+    Optional<Drop> findDetailById(@Param("dropId") Long dropId);
+
     boolean existsByProductId(Long productId);
 
     Page<Drop> findAllByVisibleTrue(Pageable pageable);
