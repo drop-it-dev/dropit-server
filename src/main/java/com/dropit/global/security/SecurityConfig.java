@@ -27,7 +27,7 @@ import org.springframework.util.StringUtils;
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity(jsr250Enabled = true)
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
@@ -96,6 +96,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login", "/auth/reissue").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/drops", "/drops/*").permitAll()
                         .anyRequest().authenticated()
                 )
                 // JWT 인증이 익명 인증보다 먼저 처리되도록 순서 지정

@@ -7,6 +7,7 @@ import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.service.DropService;
 import com.dropit.global.security.principal.CurrentUserId;
+import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ public class DropController {
                 .body(dropId);
     }
 
+    @PermitAll
     @GetMapping("/drops")
     public ResponseEntity<Page<DropResponse>> getAll(
             @ModelAttribute DropSearchCondition condition,
@@ -46,6 +48,7 @@ public class DropController {
         return ResponseEntity.ok(response);
     }
 
+    @PermitAll
     @GetMapping("/drops/{dropId}")
     public ResponseEntity<DropResponse> getOne(
             @PathVariable Long dropId
