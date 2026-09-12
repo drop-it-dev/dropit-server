@@ -134,8 +134,8 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(product, "id", productId);
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(s3ImageService.createDownloadUrl("products/limited-hoodie.webp"))
-                .thenReturn("https://signed.example.com/limited-hoodie.webp");
+        when(s3ImageService.createPublicUrl("products/limited-hoodie.webp"))
+                .thenReturn("https://public.example.com/limited-hoodie.webp");
 
         ProductResponse response = productService.getProduct(productId);
 
@@ -145,7 +145,7 @@ class ProductServiceTest {
         assertEquals("Limited Hoodie", response.getName());
         assertEquals("Limited edition hoodie", response.getDescription());
         assertEquals(
-                "https://signed.example.com/limited-hoodie.webp",
+                "https://public.example.com/limited-hoodie.webp",
                 response.getImageUrl()
         );
     }
@@ -322,8 +322,8 @@ class ProductServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(s3ImageService.upload(file, "products/100"))
                 .thenReturn("products/100/new.png");
-        when(s3ImageService.createDownloadUrl("products/100/new.png"))
-                .thenReturn("https://signed.example.com/new.png");
+        when(s3ImageService.createPublicUrl("products/100/new.png"))
+                .thenReturn("https://public.example.com/new.png");
 
         ProductResponse response = productService.uploadImage(
                 sellerId,
@@ -332,7 +332,7 @@ class ProductServiceTest {
         );
 
         assertEquals("products/100/new.png", product.getImageUrl());
-        assertEquals("https://signed.example.com/new.png", response.getImageUrl());
+        assertEquals("https://public.example.com/new.png", response.getImageUrl());
         verify(s3ImageService).upload(file, "products/100");
     }
 

@@ -75,11 +75,10 @@ class DropDocumentationTest extends DocumentationTestSupport {
     @Test
     void getAll() throws Exception {
         when(dropService.getAll(any(), any())).thenReturn(new PageImpl<>(List.of(dropResponse()), PageRequest.of(0, 20), 1));
-        mockMvc.perform(authenticated(get("/drops").param("keyword", "hoodie").param("status", "OPEN").param("page", "0").param("size", "20")))
+        mockMvc.perform(get("/drops").param("keyword", "hoodie").param("status", "OPEN").param("page", "0").param("size", "20"))
                 .andExpect(status().isOk())
                 .andDo(document("drops-get-all", resource(builder()
                         .tag("Drops").summary("드랍 목록 조회").description("검색 조건과 페이징 조건으로 드랍을 조회합니다.")
-                        .requestHeaders(authorizationHeader())
                         .queryParameters(
                                 parameterWithName("keyword").optional().description("상품명 검색어"),
                                 parameterWithName("status").optional().description("드랍 상태"),
@@ -93,10 +92,10 @@ class DropDocumentationTest extends DocumentationTestSupport {
     @Test
     void getOne() throws Exception {
         when(dropService.getOne(100L)).thenReturn(dropResponse());
-        mockMvc.perform(authenticated(get("/drops/{dropId}", 100L)))
+        mockMvc.perform(get("/drops/{dropId}", 100L))
                 .andExpect(status().isOk())
                 .andDo(document("drops-get", resource(builder()
-                        .tag("Drops").summary("드랍 단건 조회").requestHeaders(authorizationHeader())
+                        .tag("Drops").summary("드랍 단건 조회")
                         .pathParameters(parameterWithName("dropId").description("드랍 ID"))
                         .responseSchema(new Schema("DropResponse")).responseFields(dropFields()).build())));
     }
