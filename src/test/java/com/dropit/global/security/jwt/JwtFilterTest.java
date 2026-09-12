@@ -7,6 +7,8 @@ import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
@@ -39,6 +41,30 @@ class JwtFilterTest {
 
         verify(filterChain).doFilter(request, response);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "GET, /actuator/health",
+            "POST, /auth/signup",
+            "POST, /auth/login",
+            "POST, /auth/reissue",
+            "GET, /drops",
+            "GET, /drops/100"
+    })
+    void invalidTokenOnPermitAllPathIsIgnored(String method, String path) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(method, path);
+        request.setServletPath(path);
+        request.addHeader("Authorization", "Bearer invalid-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain filterChain = mock(FilterChain.class);
+        when(jwtUtil.getAccessTokenClaims("invalid-token"))
+                .thenThrow(new ServiceException(JwtErrorCode.JWT_TOKEN_SIGNATURE_ERROR));
+
+        jwtFilter.doFilter(request, response, filterChain);
+
+        verify(jwtUtil, never()).getAccessTokenClaims("invalid-token");
+        verify(filterChain).doFilter(request, response);
     }
 
     @Test
