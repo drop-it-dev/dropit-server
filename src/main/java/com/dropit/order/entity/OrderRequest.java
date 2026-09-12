@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.UUID;
 
 @Getter
@@ -57,6 +58,9 @@ public class OrderRequest extends BaseEntity {
     @Column(name = "discount_rate", nullable = false)
     private int discountRate;
 
+    @Column(name = "failure_code", length = 50)
+    private String failureCode;
+
     public OrderRequest(
             UUID requestId,
             Long userId,
@@ -78,5 +82,50 @@ public class OrderRequest extends BaseEntity {
         this.unitPrice = unitPrice;
         this.quantity = quantity;
         this.discountRate = discountRate;
+    }
+
+    public boolean matches(
+            Long userId,
+            Long dropId,
+            String idempotencyKeyHash,
+            String payloadHash,
+            int quantity,
+            String productName,
+            BigDecimal unitPrice,
+            int discountRate
+    ) {
+        return Objects.equals(this.userId, userId)
+                && Objects.equals(this.dropId, dropId)
+                && Objects.equals(this.idempotencyKeyHash, idempotencyKeyHash)
+                && Objects.equals(this.payloadHash, payloadHash)
+                && this.quantity == quantity
+                && Objects.equals(this.productName, productName)
+                && this.unitPrice.compareTo(unitPrice) == 0
+                && this.discountRate == discountRate;
+    }
+
+    public boolean isTerminal() {
+        return status == OrderRequestStatus.SUCCEEDED || status == OrderRequestStatus.FAILED;
+    }
+
+    public boolean succeed(Order order) {
+        if (status != OrderRequestStatus.PENDING) {
+            return false;
+        }
+
+        this.status = OrderRequestStatus.SUCCEEDED;
+        this.order = order;
+        this.failureCode = null;
+        return true;
+    }
+
+    public boolean fail(String failureCode) {
+        if (status != OrderRequestStatus.PENDING) {
+            return false;
+        }
+
+        this.status = OrderRequestStatus.FAILED;
+        this.failureCode = failureCode;
+        return true;
     }
 }
