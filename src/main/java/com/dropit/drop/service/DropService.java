@@ -65,7 +65,6 @@ public class DropService {
         return drops.map(DropResponse::from);
     }
 
-    @Transactional(readOnly = true)
     @Cacheable(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId", sync = true)
     public DropResponse getOne(Long dropId) {
         Drop drop = dropRepository.findDetailById(dropId)
