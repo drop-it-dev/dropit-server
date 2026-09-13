@@ -13,6 +13,8 @@ public enum DropErrorCode implements ErrorCode {
     INSUFFICIENT_STOCK(HttpStatus.CONFLICT, "드랍 재고가 부족합니다."),
     INVALID_DROP_VALUE(HttpStatus.BAD_REQUEST, "드랍 판매 값이 올바르지 않습니다."),
     INVALID_DROP_PERIOD(HttpStatus.BAD_REQUEST, "판매 종료 시각은 시작 시각보다 늦어야 합니다."),
+    DROP_SALE_PREPARED(HttpStatus.CONFLICT, "판매 준비가 완료되어 판매 설정을 변경할 수 없습니다."),
+    DROP_ADMISSION_NOT_READY(HttpStatus.SERVICE_UNAVAILABLE, "주문 접수용 판매 상태를 준비할 수 없습니다."),
     DROP_ALREADY_STARTED(HttpStatus.CONFLICT, "이미 판매가 시작된 드랍입니다.");
 
     private final HttpStatus status;
