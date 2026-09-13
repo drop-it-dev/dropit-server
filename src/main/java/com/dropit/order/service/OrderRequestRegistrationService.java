@@ -1,5 +1,9 @@
 package com.dropit.order.service;
 
+import com.dropit.drop.entity.Drop;
+import com.dropit.drop.exception.DropErrorCode;
+import com.dropit.drop.repository.DropRepository;
+import com.dropit.global.exception.ServiceException;
 import com.dropit.order.entity.OrderRequest;
 import com.dropit.order.messaging.InvalidOrderMessageException;
 import com.dropit.order.messaging.OrderMessage;
@@ -15,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderRequestRegistrationService {
 
     private final OrderRequestRepository orderRequestRepository;
+    private final DropRepository dropRepository;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void register(OrderMessage message) {
@@ -26,6 +31,12 @@ public class OrderRequestRegistrationService {
             return;
         }
 
+        Drop drop = dropRepository.findById(message.dropId())
+                .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
+        java.time.Instant redisExpiresAt = drop.getCloseAt()
+                .atZone(java.time.ZoneId.of("Asia/Seoul"))
+                .toInstant()
+                .plus(java.time.Duration.ofHours(24));
         orderRequestRepository.saveAndFlush(new OrderRequest(
                 message.requestId(),
                 message.userId(),
@@ -36,7 +47,8 @@ public class OrderRequestRegistrationService {
                 message.unitPrice(),
                 message.quantity(),
                 message.discountRate(),
-                OrderMessageValidator.acceptedAt(message)
+                OrderMessageValidator.acceptedAt(message),
+                redisExpiresAt
         ));
     }
 

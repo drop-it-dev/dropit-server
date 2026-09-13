@@ -8,6 +8,7 @@ import com.dropit.order.dto.response.OrderRequestStatusResponse;
 import com.dropit.order.redis.ReservedOrderSnapshot;
 import com.dropit.order.service.OrderAdmissionService;
 import com.dropit.order.service.OrderRequestQueryService;
+import com.dropit.order.service.OrderCancellationService;
 import com.dropit.order.dto.response.OrderSummaryResponse;
 import com.dropit.order.service.OrderService;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ public class OrderController {
     private final OrderService orderService;
     private final OrderAdmissionService orderAdmissionService;
     private final OrderRequestQueryService orderRequestQueryService;
+    private final OrderCancellationService orderCancellationService;
 
     @PostMapping("/orders")
     public ResponseEntity<OrderAdmissionResponse> create(
@@ -69,7 +71,7 @@ public class OrderController {
             @CurrentUserId Long userId,
             @PathVariable Long orderId
     ) {
-        orderService.cancel(userId, orderId);
+        orderCancellationService.cancel(userId, orderId);
 
         return ResponseEntity.noContent().build();
     }

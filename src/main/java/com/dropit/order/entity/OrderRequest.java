@@ -17,6 +17,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Instant;
+import com.dropit.order.redis.RedisOrderRequestState;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -80,6 +82,13 @@ public class OrderRequest extends BaseEntity {
     @Column(name = "desired_version", nullable = false)
     private long desiredVersion;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "desired_redis_state", length = 20)
+    private RedisOrderRequestState desiredRedisState;
+
+    @Column(name = "redis_expires_at", nullable = false)
+    private Instant redisExpiresAt;
+
     public OrderRequest(
             UUID requestId,
             Long userId,
@@ -90,7 +99,8 @@ public class OrderRequest extends BaseEntity {
             BigDecimal unitPrice,
             int quantity,
             int discountRate,
-            LocalDateTime acceptedAt
+            LocalDateTime acceptedAt,
+            Instant redisExpiresAt
     ) {
         this.id = requestId;
         this.status = OrderRequestStatus.PENDING;
@@ -103,6 +113,7 @@ public class OrderRequest extends BaseEntity {
         this.quantity = quantity;
         this.discountRate = discountRate;
         this.acceptedAt = acceptedAt;
+        this.redisExpiresAt = redisExpiresAt;
     }
 
     public boolean matches(
@@ -137,7 +148,7 @@ public class OrderRequest extends BaseEntity {
         this.status = OrderRequestStatus.SUCCEEDED;
         this.order = order;
         this.failureCode = null;
-        requestRedisSync();
+        requestRedisSync(RedisOrderRequestState.SUCCEEDED);
         return true;
     }
 
@@ -148,7 +159,7 @@ public class OrderRequest extends BaseEntity {
 
         this.status = OrderRequestStatus.FAILED;
         this.failureCode = failureCode;
-        requestRedisSync();
+        requestRedisSync(RedisOrderRequestState.FAILED);
         return true;
     }
 
@@ -165,8 +176,13 @@ public class OrderRequest extends BaseEntity {
         return true;
     }
 
-    private void requestRedisSync() {
+    public void requestCancellationSync() {
+        requestRedisSync(RedisOrderRequestState.CANCELED);
+    }
+
+    private void requestRedisSync(RedisOrderRequestState desiredState) {
         redisSyncPending = true;
+        desiredRedisState = desiredState;
         desiredVersion++;
     }
 }
