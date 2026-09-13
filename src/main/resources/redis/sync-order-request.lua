@@ -5,21 +5,27 @@
 -- KEYS[1] = {drop:<dropId>}:idempotency:user:<userId>:<idempotencyKeyHash>
 -- KEYS[2] = {drop:<dropId>}:stock
 -- KEYS[3] = {drop:<dropId>}:purchase:user:<userId>
--- ARGV[1] = 최종 상태(SUCCEEDED/FAILED), ARGV[2] = quantity,
--- ARGV[3] = orderId, ARGV[4] = failureCode, ARGV[5] = DB 동기화 버전
+-- ARGV[1] = requestId, ARGV[2] = 최종 상태(SUCCEEDED/FAILED), ARGV[3] = quantity,
+-- ARGV[4] = orderId, ARGV[5] = failureCode, ARGV[6] = DB 동기화 버전
 local reservationKey = KEYS[1]
 local stockKey = KEYS[2]
 local purchaseKey = KEYS[3]
 
-local targetStatus = ARGV[1]
-local quantity = tonumber(ARGV[2])
-local orderId = ARGV[3]
-local failureCode = ARGV[4]
-local desiredVersion = ARGV[5]
+local requestId = ARGV[1]
+local targetStatus = ARGV[2]
+local quantity = tonumber(ARGV[3])
+local orderId = ARGV[4]
+local failureCode = ARGV[5]
+local desiredVersion = ARGV[6]
 
 if redis.call('TYPE', reservationKey).ok ~= 'hash' then
     -- 어떤 예약을 확정해야 하는지 모르므로 재고·구매량을 임의로 바꾸지 않는다.
     return 'MISSING'
+end
+
+if redis.call('HGET', reservationKey, 'requestId') ~= requestId then
+    -- TTL 만료 뒤 같은 키가 재사용되어도 다른 요청의 예약을 변경하지 않는다.
+    return 'INVALID'
 end
 
 local currentStatus = redis.call('HGET', reservationKey, 'status')

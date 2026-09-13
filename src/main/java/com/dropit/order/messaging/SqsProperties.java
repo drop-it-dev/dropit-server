@@ -10,7 +10,6 @@ public record SqsProperties(
         int consumerMaxNumberOfMessages,
         int consumerWaitTimeSeconds,
         int consumerVisibilityTimeoutSeconds,
-        long consumerInitialDelay,
-        long consumerPollDelay
+        long publisherTimeoutMillis
 ) {
 }

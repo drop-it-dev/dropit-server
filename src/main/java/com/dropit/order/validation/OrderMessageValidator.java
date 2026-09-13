@@ -24,6 +24,10 @@ public final class OrderMessageValidator {
                 || message.dropId() == null || message.dropId() <= 0
                 || invalidHash(message.idempotencyKeyHash())
                 || invalidHash(message.requestFingerprint())
+                || !Objects.equals(
+                        message.requestFingerprint(),
+                        expectedFingerprint(message)
+                )
                 || message.quantity() <= 0
                 || message.acceptedAt() == null
                 || message.productName() == null || message.productName().isBlank()
@@ -60,5 +64,12 @@ public final class OrderMessageValidator {
 
     private static boolean invalidHash(String value) {
         return value == null || value.isBlank() || value.length() > 64;
+    }
+
+    private static String expectedFingerprint(OrderMessage message) {
+        if (message == null || message.dropId() == null || message.dropId() <= 0 || message.quantity() <= 0) {
+            return null;
+        }
+        return OrderRequestFingerprint.of(message.dropId(), message.quantity());
     }
 }
