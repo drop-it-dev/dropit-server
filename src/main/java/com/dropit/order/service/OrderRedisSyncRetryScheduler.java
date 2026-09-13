@@ -27,7 +27,11 @@ public class OrderRedisSyncRetryScheduler {
             try {
                 syncService.sync(request.getId());
             } catch (RuntimeException exception) {
-                syncService.defer(request.getId(), RETRY_DELAY);
+                try {
+                    syncService.defer(request.getId(), RETRY_DELAY);
+                } catch (RuntimeException deferException) {
+                    exception.addSuppressed(deferException);
+                }
                 log.warn("주문 Redis 동기화 재시도에 실패했습니다. requestId={}", request.getId(), exception);
             }
         }
