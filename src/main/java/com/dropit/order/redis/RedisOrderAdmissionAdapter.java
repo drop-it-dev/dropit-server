@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -56,9 +57,31 @@ public class RedisOrderAdmissionAdapter {
     }
 
     public ReservedOrderSnapshot getSnapshot(Long dropId, Long userId, String keyHash) {
-        Map<Object, Object> values = redisTemplate.opsForHash().entries(
-                RedisOrderKeyFactory.idempotencyKey(dropId, userId, keyHash)
+        return parseSnapshot(redisTemplate.opsForHash().entries(
+                RedisOrderKeyFactory.idempotencyKey(dropId, userId, keyHash)));
+    }
+
+    public Optional<ReservedOrderSnapshot> findByRequestId(UUID requestId, Long userId) {
+        Map<Object, Object> index = redisTemplate.opsForHash().entries(
+                RedisOrderKeyFactory.requestIndexKey(requestId)
         );
+        if (index.isEmpty() || !requestId.toString().equals(optional(index, "requestId"))
+                || !userId.toString().equals(optional(index, "userId"))) {
+            return Optional.empty();
+        }
+        String idempotencyKey = required(index, "idempotencyKey");
+        Map<Object, Object> values = redisTemplate.opsForHash().entries(idempotencyKey);
+        if (values.isEmpty()) {
+            return Optional.empty();
+        }
+        ReservedOrderSnapshot snapshot = parseSnapshot(values);
+        if (!requestId.equals(snapshot.requestId()) || !userId.equals(snapshot.userId())) {
+            return Optional.empty();
+        }
+        return Optional.of(snapshot);
+    }
+
+    private ReservedOrderSnapshot parseSnapshot(Map<Object, Object> values) {
         if (values.isEmpty()) {
             throw new IllegalStateException("Redis 주문 예약 snapshot이 없습니다.");
         }
