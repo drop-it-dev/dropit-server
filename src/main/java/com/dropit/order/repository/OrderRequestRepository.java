@@ -12,6 +12,8 @@ import java.util.UUID;
 
 public interface OrderRequestRepository extends JpaRepository<OrderRequest, UUID> {
 
+    Optional<OrderRequest> findByIdAndUserId(UUID id, Long userId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from OrderRequest r where r.id = :requestId")
     Optional<OrderRequest> findByRequestIdForUpdate(@Param("requestId") UUID requestId);
