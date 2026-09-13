@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.UUID;
 import java.time.Instant;
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -34,5 +35,9 @@ public class OrderRequestRedisSyncService {
             throw new IllegalStateException("Redis 주문 최종 상태를 반영할 수 없습니다: " + result);
         }
         stateService.clearPending(command.requestId(), command.desiredVersion());
+    }
+
+    public void defer(UUID requestId, Duration delay) {
+        stateService.defer(requestId, Instant.now().plus(delay));
     }
 }

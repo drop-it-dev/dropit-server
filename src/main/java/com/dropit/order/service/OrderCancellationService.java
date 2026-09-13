@@ -49,7 +49,7 @@ public class OrderCancellationService {
         OrderRequest request = requestRepository.findByOrderIdForUpdate(orderId).orElse(null);
         Order order = orderRepository.findByIdAndUser_IdForUpdate(orderId, userId)
                 .orElseThrow(() -> new ServiceException(OrderErrorCode.ORDER_NOT_FOUND));
-        List<OrderItem> items = itemRepository.findAllByOrder_IdOrderByIdAsc(orderId);
+        List<OrderItem> items = itemRepository.findAllForCancellationOrderByDropIdAsc(orderId);
         order.cancel();
         for (OrderItem item : items) {
             Long dropId = item.getDrop().getId();

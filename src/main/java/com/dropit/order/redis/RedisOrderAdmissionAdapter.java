@@ -18,6 +18,7 @@ public class RedisOrderAdmissionAdapter {
 
     private static final DefaultRedisScript<String> RESERVE_ORDER_SCRIPT = createScript();
     private static final DefaultRedisScript<Long> CONFIRM_PUBLICATION_SCRIPT = confirmPublicationScript();
+    private static final DefaultRedisScript<Long> INDEX_REQUEST_SCRIPT = indexRequestScript();
 
     private final StringRedisTemplate redisTemplate;
 
@@ -123,14 +124,19 @@ public class RedisOrderAdmissionAdapter {
 
     public void indexRequest(ReservedOrderSnapshot snapshot) {
         String key = RedisOrderKeyFactory.requestIndexKey(snapshot.requestId());
-        redisTemplate.opsForHash().putAll(key, Map.of(
-                "requestId", snapshot.requestId().toString(),
-                "userId", snapshot.userId().toString(),
-                "dropId", snapshot.dropId().toString(),
-                "idempotencyKey", RedisOrderKeyFactory.idempotencyKey(
-                        snapshot.dropId(), snapshot.userId(), snapshot.idempotencyKeyHash())
-        ));
-        redisTemplate.expireAt(key, Instant.ofEpochMilli(snapshot.expiresAtEpochMillis()));
+        Long result = redisTemplate.execute(
+                INDEX_REQUEST_SCRIPT,
+                List.of(key),
+                snapshot.requestId().toString(),
+                snapshot.userId().toString(),
+                snapshot.dropId().toString(),
+                RedisOrderKeyFactory.idempotencyKey(
+                        snapshot.dropId(), snapshot.userId(), snapshot.idempotencyKeyHash()),
+                Long.toString(snapshot.expiresAtEpochMillis())
+        );
+        if (result == null || result != 1L) {
+            throw new IllegalStateException("Redis 주문 요청 index를 저장할 수 없습니다.");
+        }
     }
 
     private static String required(Map<Object, Object> values, String field) {
@@ -176,6 +182,24 @@ public class RedisOrderAdmissionAdapter {
                     return 0
                 end
                 redis.call('HSET', KEYS[1], 'publicationState', 'CONFIRMED')
+                return 1
+                """);
+        script.setResultType(Long.class);
+        return script;
+    }
+
+    private static DefaultRedisScript<Long> indexRequestScript() {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setScriptText("""
+                redis.call('HSET', KEYS[1],
+                        'requestId', ARGV[1],
+                        'userId', ARGV[2],
+                        'dropId', ARGV[3],
+                        'idempotencyKey', ARGV[4])
+                if redis.call('PEXPIREAT', KEYS[1], ARGV[5]) ~= 1 then
+                    redis.call('DEL', KEYS[1])
+                    return 0
+                end
                 return 1
                 """);
         script.setResultType(Long.class);
