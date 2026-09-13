@@ -10,8 +10,8 @@ import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import tools.jackson.databind.ObjectMapper;
 
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Slf4j
 @Component
@@ -22,7 +22,7 @@ public class SqsOrderMessageConsumer {
     private final SqsProperties properties;
     private final ObjectMapper objectMapper;
     private final OrderMessageProcessor messageProcessor;
-    private final ExecutorService sqsOrderConsumerExecutor;
+    private final ThreadPoolExecutor sqsOrderConsumerExecutor;
 
     @Scheduled(
             initialDelayString = "${app.order.sqs.consumer-initial-delay}",
@@ -35,9 +35,15 @@ public class SqsOrderMessageConsumer {
             return;
         }
 
+        int availableWorkerCount = properties.consumerConcurrency() - sqsOrderConsumerExecutor.getActiveCount();
+        if (availableWorkerCount <= 0) {
+            return;
+        }
+
         ReceiveMessageRequest request = ReceiveMessageRequest.builder()
                 .queueUrl(properties.orderQueueUrl())
-                .maxNumberOfMessages(properties.consumerMaxNumberOfMessages())
+                // 처리 가능한 수만 받아, 실행 대기열에 넣지 못한 메시지의 재전달을 줄인다.
+                .maxNumberOfMessages(Math.min(properties.consumerMaxNumberOfMessages(), availableWorkerCount))
                 .waitTimeSeconds(properties.consumerWaitTimeSeconds())
                 .visibilityTimeout(properties.consumerVisibilityTimeoutSeconds())
                 .build();
