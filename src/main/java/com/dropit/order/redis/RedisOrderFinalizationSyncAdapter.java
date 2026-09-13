@@ -28,6 +28,7 @@ public class RedisOrderFinalizationSyncAdapter {
                         RedisOrderKeyFactory.stockKey(command.dropId()),
                         RedisOrderKeyFactory.purchaseKey(command.dropId(), command.userId())
                 ),
+                command.requestId().toString(),
                 command.status().name(),
                 Integer.toString(command.quantity()),
                 command.orderId() == null ? "" : command.orderId().toString(),
