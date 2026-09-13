@@ -16,7 +16,7 @@ services:
       retries: 10
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:12.4.10
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
@@ -30,6 +30,24 @@ services:
     depends_on:
       influxdb:
         condition: service_healthy
+
+  k6:
+    image: grafana/k6:1.7.1
+    profiles: ["load"]
+    environment:
+      K6_OUT: influxdb=http://influxdb:8086/k6
+      BASE_URL: ${BASE_URL:-http://host.docker.internal:8080}
+      TEST_RUN: ${TEST_RUN:-order-flow-smoke}
+      AUTH_TOKEN: ${AUTH_TOKEN:-}
+    volumes:
+      - ./k6:/scripts:ro
+      - ./results/raw:/results
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    entrypoint: ["k6"]
+    command: ["run", "/scripts/${K6_SCRIPT:-drop-list-index.js}"]
+    restart: "no"
 
 volumes:
   influxdb-data:
