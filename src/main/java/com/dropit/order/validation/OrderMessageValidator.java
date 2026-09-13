@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -51,7 +52,10 @@ public final class OrderMessageValidator {
     }
 
     public static LocalDateTime acceptedAt(OrderMessage message) {
-        return LocalDateTime.ofInstant(message.acceptedAt(), BUSINESS_ZONE);
+        return LocalDateTime.ofInstant(
+                message.acceptedAt().truncatedTo(ChronoUnit.MICROS),
+                BUSINESS_ZONE
+        );
     }
 
     private static boolean invalidHash(String value) {
