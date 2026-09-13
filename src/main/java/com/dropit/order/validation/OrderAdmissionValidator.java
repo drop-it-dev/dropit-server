@@ -19,12 +19,12 @@ public final class OrderAdmissionValidator {
                 || request.idempotencyKeyHash() == null
                 || request.idempotencyKeyHash().isBlank()
                 || request.idempotencyKeyHash().length() > 64
+                || request.quantity() <= 0
                 || request.fingerprint() == null
                 || !request.fingerprint().equals(
-                OrderAdmissionRequest.fingerprintOf(request.dropId(), request.quantity())
+                OrderRequestFingerprint.of(request.dropId(), request.quantity())
         )
-                || request.quantity() <= 0
-                || request.purchaseLimit() < 0) {
+                || request.acceptedAtEpochMicros() <= 0) {
             throw new ServiceException(CommonErrorCode.INVALID_INPUT);
         }
     }
