@@ -6,7 +6,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -14,6 +16,7 @@ import java.util.UUID;
 public class RedisOrderAdmissionAdapter {
 
     private static final DefaultRedisScript<String> RESERVE_ORDER_SCRIPT = createScript();
+    private static final DefaultRedisScript<Long> CONFIRM_PUBLICATION_SCRIPT = confirmPublicationScript();
 
     private final StringRedisTemplate redisTemplate;
 
@@ -29,8 +32,9 @@ public class RedisOrderAdmissionAdapter {
             String result = redisTemplate.execute(
                     RESERVE_ORDER_SCRIPT,
                     List.of(
+                            RedisOrderKeyFactory.saleKey(request.dropId()),
                             RedisOrderKeyFactory.stockKey(request.dropId()),
-                            RedisOrderKeyFactory.purchaseKey(request.dropId(), request.userId()),
+                            RedisOrderKeyFactory.purchaseKey(request.dropId()),
                             RedisOrderKeyFactory.idempotencyKey(
                                     request.dropId(),
                                     request.userId(),
@@ -40,12 +44,88 @@ public class RedisOrderAdmissionAdapter {
                     request.requestId().toString(),
                     request.fingerprint(),
                     String.valueOf(request.quantity()),
-                    String.valueOf(request.purchaseLimit())
+                    Long.toString(request.acceptedAtEpochMicros()),
+                    Long.toString(request.userId()),
+                    Long.toString(request.dropId()),
+                    request.idempotencyKeyHash()
             );
             return parseResult(result);
         } catch (RuntimeException exception) {
             return OrderAdmissionResult.of(OrderAdmissionResultType.NOT_READY);
         }
+    }
+
+    public ReservedOrderSnapshot getSnapshot(Long dropId, Long userId, String keyHash) {
+        Map<Object, Object> values = redisTemplate.opsForHash().entries(
+                RedisOrderKeyFactory.idempotencyKey(dropId, userId, keyHash)
+        );
+        if (values.isEmpty()) {
+            throw new IllegalStateException("Redis 주문 예약 snapshot이 없습니다.");
+        }
+        long acceptedAtMicros = Long.parseLong(required(values, "acceptedAtEpochMicros"));
+        long seconds = Math.floorDiv(acceptedAtMicros, 1_000_000L);
+        long micros = Math.floorMod(acceptedAtMicros, 1_000_000L);
+        return new ReservedOrderSnapshot(
+                UUID.fromString(required(values, "requestId")),
+                Long.valueOf(required(values, "userId")),
+                Long.valueOf(required(values, "dropId")),
+                required(values, "idempotencyKeyHash"),
+                required(values, "fingerprint"),
+                Integer.parseInt(required(values, "quantity")),
+                Instant.ofEpochSecond(seconds, micros * 1_000L),
+                required(values, "productName"),
+                new java.math.BigDecimal(required(values, "unitPrice")),
+                Integer.parseInt(required(values, "discountRate")),
+                required(values, "publicationState"),
+                com.dropit.order.entity.OrderRequestStatus.valueOf(required(values, "status")),
+                optionalLong(values, "orderId"),
+                optional(values, "failureCode"),
+                Long.parseLong(required(values, "expiresAtEpochMillis"))
+        );
+    }
+
+    public void confirmPublication(ReservedOrderSnapshot snapshot) {
+        String key = RedisOrderKeyFactory.idempotencyKey(
+                snapshot.dropId(), snapshot.userId(), snapshot.idempotencyKeyHash()
+        );
+        Long result = redisTemplate.execute(
+                CONFIRM_PUBLICATION_SCRIPT,
+                List.of(key),
+                snapshot.requestId().toString()
+        );
+        if (result == null || result != 1L) {
+            throw new IllegalStateException("Redis 주문 발행 상태를 확인할 수 없습니다.");
+        }
+    }
+
+    public void indexRequest(ReservedOrderSnapshot snapshot) {
+        String key = RedisOrderKeyFactory.requestIndexKey(snapshot.requestId());
+        redisTemplate.opsForHash().putAll(key, Map.of(
+                "requestId", snapshot.requestId().toString(),
+                "userId", snapshot.userId().toString(),
+                "dropId", snapshot.dropId().toString(),
+                "idempotencyKey", RedisOrderKeyFactory.idempotencyKey(
+                        snapshot.dropId(), snapshot.userId(), snapshot.idempotencyKeyHash())
+        ));
+        redisTemplate.expireAt(key, Instant.ofEpochMilli(snapshot.expiresAtEpochMillis()));
+    }
+
+    private static String required(Map<Object, Object> values, String field) {
+        String value = optional(values, field);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Redis 주문 예약 필드가 없습니다: " + field);
+        }
+        return value;
+    }
+
+    private static String optional(Map<Object, Object> values, String field) {
+        Object value = values.get(field);
+        return value == null ? null : value.toString();
+    }
+
+    private static Long optionalLong(Map<Object, Object> values, String field) {
+        String value = optional(values, field);
+        return value == null || value.isBlank() ? null : Long.valueOf(value);
     }
 
     private static OrderAdmissionResult parseResult(String result) {
@@ -61,8 +141,22 @@ public class RedisOrderAdmissionAdapter {
             case "OUT_OF_STOCK" -> OrderAdmissionResult.of(OrderAdmissionResultType.OUT_OF_STOCK);
             case "PURCHASE_LIMIT_EXCEEDED" ->
                     OrderAdmissionResult.of(OrderAdmissionResultType.PURCHASE_LIMIT_EXCEEDED);
+            case "NOT_OPEN" -> OrderAdmissionResult.of(OrderAdmissionResultType.NOT_OPEN);
             default -> OrderAdmissionResult.of(OrderAdmissionResultType.NOT_READY);
         };
+    }
+
+    private static DefaultRedisScript<Long> confirmPublicationScript() {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setScriptText("""
+                if redis.call('HGET', KEYS[1], 'requestId') ~= ARGV[1] then
+                    return 0
+                end
+                redis.call('HSET', KEYS[1], 'publicationState', 'CONFIRMED')
+                return 1
+                """);
+        script.setResultType(Long.class);
+        return script;
     }
 
     private static OrderAdmissionResult resultWithRequestId(

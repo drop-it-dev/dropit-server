@@ -6,6 +6,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RedisOrderKeyFactory {
 
+    public static String requestIndexKey(java.util.UUID requestId) {
+        if (requestId == null) {
+            throw new IllegalArgumentException("requestId is required");
+        }
+        return "order-request:" + requestId;
+    }
+
     public static String stockKey(Long dropId) {
         return dropKey(dropId) + ":stock";
     }

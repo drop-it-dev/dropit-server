@@ -9,7 +9,7 @@ public record OrderAdmissionRequest(
         String idempotencyKeyHash,
         String fingerprint,
         int quantity,
-        int purchaseLimit
+        long acceptedAtEpochMicros
 ) {
 
     public static OrderAdmissionRequest create(
@@ -17,20 +17,16 @@ public record OrderAdmissionRequest(
             Long dropId,
             String idempotencyKeyHash,
             int quantity,
-            int purchaseLimit
+            long acceptedAtEpochMicros
     ) {
         return new OrderAdmissionRequest(
                 UUID.randomUUID(),
                 userId,
                 dropId,
                 idempotencyKeyHash,
-                fingerprintOf(dropId, quantity),
+                com.dropit.order.validation.OrderRequestFingerprint.of(dropId, quantity),
                 quantity,
-                purchaseLimit
+                acceptedAtEpochMicros
         );
-    }
-
-    public static String fingerprintOf(Long dropId, int quantity) {
-        return dropId + ":" + quantity;
     }
 }

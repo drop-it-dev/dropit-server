@@ -6,5 +6,6 @@ public enum OrderAdmissionResultType {
     CONFLICT,
     OUT_OF_STOCK,
     PURCHASE_LIMIT_EXCEEDED,
+    NOT_OPEN,
     NOT_READY
 }
