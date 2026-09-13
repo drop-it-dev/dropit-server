@@ -1,12 +1,22 @@
 package com.dropit.order.entity;
 
 import com.dropit.global.entity.BaseEntity;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -58,8 +68,17 @@ public class OrderRequest extends BaseEntity {
     @Column(name = "discount_rate", nullable = false)
     private int discountRate;
 
+    @Column(name = "accepted_at", nullable = false)
+    private LocalDateTime acceptedAt;
+
     @Column(name = "failure_code", length = 50)
     private String failureCode;
+
+    @Column(name = "redis_sync_pending", nullable = false)
+    private boolean redisSyncPending;
+
+    @Column(name = "desired_version", nullable = false)
+    private long desiredVersion;
 
     public OrderRequest(
             UUID requestId,
@@ -70,7 +89,8 @@ public class OrderRequest extends BaseEntity {
             String productName,
             BigDecimal unitPrice,
             int quantity,
-            int discountRate
+            int discountRate,
+            LocalDateTime acceptedAt
     ) {
         this.id = requestId;
         this.status = OrderRequestStatus.PENDING;
@@ -82,6 +102,7 @@ public class OrderRequest extends BaseEntity {
         this.unitPrice = unitPrice;
         this.quantity = quantity;
         this.discountRate = discountRate;
+        this.acceptedAt = acceptedAt;
     }
 
     public boolean matches(
@@ -116,6 +137,7 @@ public class OrderRequest extends BaseEntity {
         this.status = OrderRequestStatus.SUCCEEDED;
         this.order = order;
         this.failureCode = null;
+        requestRedisSync();
         return true;
     }
 
@@ -126,6 +148,25 @@ public class OrderRequest extends BaseEntity {
 
         this.status = OrderRequestStatus.FAILED;
         this.failureCode = failureCode;
+        requestRedisSync();
         return true;
+    }
+
+    public Long getOrderId() {
+        return order == null ? null : order.getId();
+    }
+
+    public boolean completeRedisSync(long appliedVersion) {
+        if (!redisSyncPending || desiredVersion != appliedVersion) {
+            return false;
+        }
+
+        redisSyncPending = false;
+        return true;
+    }
+
+    private void requestRedisSync() {
+        redisSyncPending = true;
+        desiredVersion++;
     }
 }
