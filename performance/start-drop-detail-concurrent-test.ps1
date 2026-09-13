@@ -60,17 +60,40 @@ if ($TargetBaseUrl) {
     $baseUrl = $TargetBaseUrl.TrimEnd('/')
 }
 
+function Invoke-LoginWithRetry {
+    param(
+        [string]$Url,
+        [string]$Body,
+        [int]$MaxAttempts = 5
+    )
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        try {
+            return Invoke-RestMethod `
+                -Uri $Url `
+                -Method Post `
+                -ContentType 'application/json' `
+                -Body $Body
+        } catch {
+            if ($attempt -eq $MaxAttempts) {
+                throw
+            }
+
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+
 $loginBody = @{
     email = $authEmail
     password = $authPassword
 } | ConvertTo-Json
 
 try {
-    $tokenResponse = Invoke-RestMethod `
-        -Uri "$healthCheckUrl/auth/login" `
-        -Method Post `
-        -ContentType 'application/json' `
-        -Body $loginBody
+    $tokenResponse = Invoke-LoginWithRetry `
+        -Url "$healthCheckUrl/auth/login" `
+        -Body $loginBody `
+        -MaxAttempts 3
 } catch {
     $signupBody = @{
         email = $authEmail
@@ -79,17 +102,24 @@ try {
         role = 'USER'
     } | ConvertTo-Json
 
-    Invoke-RestMethod `
-        -Uri "$healthCheckUrl/auth/signup" `
-        -Method Post `
-        -ContentType 'application/json' `
-        -Body $signupBody | Out-Null
+    try {
+        Invoke-RestMethod `
+            -Uri "$healthCheckUrl/auth/signup" `
+            -Method Post `
+            -ContentType 'application/json' `
+            -Body $signupBody | Out-Null
+    } catch {
+        $statusCode = [int]$_.Exception.Response.StatusCode
 
-    $tokenResponse = Invoke-RestMethod `
-        -Uri "$healthCheckUrl/auth/login" `
-        -Method Post `
-        -ContentType 'application/json' `
-        -Body $loginBody
+        if ($statusCode -ne 409) {
+            throw
+        }
+    }
+
+    $tokenResponse = Invoke-LoginWithRetry `
+        -Url "$healthCheckUrl/auth/login" `
+        -Body $loginBody `
+        -MaxAttempts 10
 }
 
 $authToken = $tokenResponse.accessToken
