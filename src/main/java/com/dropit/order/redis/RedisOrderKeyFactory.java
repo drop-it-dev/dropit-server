@@ -10,8 +10,20 @@ public final class RedisOrderKeyFactory {
         return dropKey(dropId) + ":stock";
     }
 
+    public static String saleKey(Long dropId) {
+        return dropKey(dropId) + ":sale";
+    }
+
+    public static String admissionControlKey(Long dropId) {
+        return dropKey(dropId) + ":admission";
+    }
+
+    public static String purchaseKey(Long dropId) {
+        return dropKey(dropId) + ":purchases";
+    }
+
     public static String purchaseKey(Long dropId, Long userId) {
-        return dropKey(dropId) + ":purchase:user:" + userId;
+        return purchaseKey(dropId);
     }
 
     public static String idempotencyKey(Long dropId, Long userId, String idempotencyKeyHash) {

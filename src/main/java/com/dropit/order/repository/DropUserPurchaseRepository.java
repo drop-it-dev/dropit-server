@@ -10,6 +10,8 @@ import java.util.Optional;
 
 public interface DropUserPurchaseRepository extends JpaRepository<DropUserPurchase, Long> {
 
+    boolean existsByDropId(Long dropId);
+
     Optional<DropUserPurchase> findByDropIdAndUserId(Long dropId, Long userId);
 
     @Modifying

@@ -56,6 +56,15 @@ public class Drop extends BaseEntity {
     @Column(name = "close_at", nullable = false)
     private LocalDateTime closeAt;
 
+    @Column(name = "sale_version", nullable = false)
+    private long saleVersion;
+
+    @Column(name = "admission_operation_version", nullable = false)
+    private long admissionOperationVersion;
+
+    @Column(name = "sale_prepared", nullable = false)
+    private boolean salePrepared;
+
     public Drop(
             Product product,
             BigDecimal price,
@@ -143,6 +152,9 @@ public class Drop extends BaseEntity {
     }
 
     public void ensureEditable(LocalDateTime now) {
+        if (salePrepared) {
+            throw new ServiceException(DropErrorCode.DROP_SALE_PREPARED);
+        }
         if (!now.isBefore(openAt)) {
             throw new ServiceException(DropErrorCode.DROP_ALREADY_STARTED);
         }
@@ -150,6 +162,16 @@ public class Drop extends BaseEntity {
 
     public void changeVisibility(boolean visible) {
         this.visible = visible;
+        this.admissionOperationVersion++;
+    }
+
+    public void prepareSale() {
+        if (salePrepared) {
+            return;
+        }
+        this.salePrepared = true;
+        this.saleVersion++;
+        this.admissionOperationVersion++;
     }
 
     public void restoreStock(int quantity) {
