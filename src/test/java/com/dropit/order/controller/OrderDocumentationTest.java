@@ -7,6 +7,13 @@ import com.dropit.order.dto.response.OrderResponse;
 import com.dropit.order.dto.response.OrderSummaryResponse;
 import com.dropit.order.entity.OrderStatus;
 import com.dropit.order.service.OrderService;
+import com.dropit.order.service.OrderAdmissionService;
+import com.dropit.order.service.OrderRequestQueryService;
+import com.dropit.order.service.OrderCancellationService;
+import com.dropit.order.redis.ReservedOrderSnapshot;
+import com.dropit.order.entity.OrderRequestStatus;
+import java.time.Instant;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,28 +44,45 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OrderDocumentationTest extends DocumentationTestSupport {
 
     private OrderService orderService;
+    private OrderAdmissionService admissionService;
+    private OrderRequestQueryService queryService;
+    private OrderCancellationService cancellationService;
 
     @BeforeEach
     void setUp(RestDocumentationContextProvider restDocumentation) {
         orderService = mock(OrderService.class);
-        configure(restDocumentation, new OrderController(orderService));
+        admissionService = mock(OrderAdmissionService.class);
+        queryService = mock(OrderRequestQueryService.class);
+        cancellationService = mock(OrderCancellationService.class);
+        configure(restDocumentation,
+                new OrderController(orderService, admissionService, queryService, cancellationService));
     }
 
     @Test
     void create() throws Exception {
-        OrderResponse response = orderResponse();
-        when(orderService.create(eq(1L), any())).thenReturn(response);
+        UUID requestId = UUID.randomUUID();
+        when(admissionService.admit(eq(1L), eq("order-key"), any())).thenReturn(new ReservedOrderSnapshot(
+                requestId, 1L, 100L, "hash", "100:2", 2, Instant.now(),
+                "Limited Hoodie", new BigDecimal("59000"), 20,
+                "CONFIRMED", OrderRequestStatus.PENDING, null, null,
+                Instant.now().plusSeconds(86400).toEpochMilli()));
         mockMvc.perform(authenticated(post("/orders").contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "order-key")
                         .content("{\"items\":[{\"dropId\":100,\"quantity\":2}]}")))
-                .andExpect(status().isCreated())
+                .andExpect(status().isAccepted())
                 .andDo(document("orders-create", resource(builder()
-                        .tag("Orders").summary("주문 생성").description("한 개의 드랍을 대상으로 주문을 생성합니다.").requestHeaders(authorizationHeader())
+                        .tag("Orders").summary("주문 접수").description("Redis 예약 후 SQS가 수락한 주문 요청을 비동기로 접수합니다.")
+                        .requestHeaders(authorizationHeader(),
+                                org.springframework.restdocs.headers.HeaderDocumentation.headerWithName("Idempotency-Key")
+                                        .description("주문 재전송을 식별하는 멱등키"))
                         .requestSchema(new Schema("OrderCreateRequest"))
                         .requestFields(
                                 fieldWithPath("items").type(ARRAY).description("주문 항목 목록 (현재 한 항목만 허용)"),
                                 fieldWithPath("items[].dropId").type(NUMBER).description("주문할 드랍 ID"),
                                 fieldWithPath("items[].quantity").type(NUMBER).description("주문 수량")
-                        ).responseSchema(new Schema("OrderResponse")).responseFields(orderFields()).build())));
+                        ).responseSchema(new Schema("OrderAdmissionResponse")).responseFields(
+                                fieldWithPath("requestId").type(STRING).description("주문 요청 ID")
+                        ).build())));
     }
 
     @Test

@@ -42,7 +42,8 @@ class OrderMessageValidatorTest {
                 message.unitPrice(),
                 message.quantity(),
                 message.discountRate(),
-                acceptedAt
+                acceptedAt,
+                Instant.parse("2026-09-14T12:34:56Z")
         );
 
         assertEquals(123_456_000, acceptedAt.getNano());
