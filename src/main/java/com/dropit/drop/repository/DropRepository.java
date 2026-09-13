@@ -33,7 +33,7 @@ public interface DropRepository extends JpaRepository<Drop, Long>, DropRepositor
     @Query("select d from Drop d where d.id = :dropId")
     Optional<Drop> findByIdForUpdate(@Param("dropId") Long dropId);
 
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Modifying(flushAutomatically = true)
     @Query("""
             update Drop d
             set d.remainingQuantity = d.remainingQuantity - :quantity
