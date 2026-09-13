@@ -3,7 +3,6 @@ package com.dropit.drop.service;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
-import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
@@ -119,20 +118,6 @@ public class DropService {
                 request.openAt(),
                 request.closeAt()
         );
-
-        return DropResponse.from(drop);
-    }
-
-    @Transactional
-    public DropResponse changeVisibility(Long sellerId, Long dropId, DropVisibilityUpdateRequest request) {
-        Drop drop = dropRepository.findById(dropId)
-                .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
-
-        if (!Objects.equals(drop.getProduct().getSeller().getId(), sellerId)) {
-            throw new ServiceException(DropErrorCode.DROP_OWNER_REQUIRED);
-        }
-
-        drop.changeVisibility(request.visible());
 
         return DropResponse.from(drop);
     }
