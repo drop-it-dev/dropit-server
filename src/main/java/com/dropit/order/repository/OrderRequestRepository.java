@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.List;
+import java.time.Instant;
 
 public interface OrderRequestRepository extends JpaRepository<OrderRequest, UUID> {
 
@@ -19,7 +20,9 @@ public interface OrderRequestRepository extends JpaRepository<OrderRequest, UUID
     @Query("select r from OrderRequest r where r.order.id = :orderId")
     Optional<OrderRequest> findByOrderIdForUpdate(@Param("orderId") Long orderId);
 
-    List<OrderRequest> findTop100ByRedisSyncPendingTrueOrderByUpdatedAtAsc();
+    List<OrderRequest> findTop100ByRedisSyncPendingTrueAndRedisSyncNextAttemptAtLessThanEqualOrderByRedisSyncNextAttemptAtAsc(
+            Instant now
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from OrderRequest r where r.id = :requestId")

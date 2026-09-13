@@ -89,6 +89,12 @@ public class OrderRequest extends BaseEntity {
     @Column(name = "redis_expires_at", nullable = false)
     private Instant redisExpiresAt;
 
+    @Column(name = "redis_sync_attempt_count", nullable = false)
+    private int redisSyncAttemptCount;
+
+    @Column(name = "redis_sync_next_attempt_at")
+    private Instant redisSyncNextAttemptAt;
+
     public OrderRequest(
             UUID requestId,
             Long userId,
@@ -173,7 +179,16 @@ public class OrderRequest extends BaseEntity {
         }
 
         redisSyncPending = false;
+        redisSyncNextAttemptAt = null;
         return true;
+    }
+
+    public void deferRedisSync(Instant nextAttemptAt) {
+        if (!redisSyncPending) {
+            return;
+        }
+        redisSyncAttemptCount++;
+        redisSyncNextAttemptAt = nextAttemptAt;
     }
 
     public void requestCancellationSync() {
@@ -184,5 +199,7 @@ public class OrderRequest extends BaseEntity {
         redisSyncPending = true;
         desiredRedisState = desiredState;
         desiredVersion++;
+        redisSyncAttemptCount = 0;
+        redisSyncNextAttemptAt = Instant.now();
     }
 }

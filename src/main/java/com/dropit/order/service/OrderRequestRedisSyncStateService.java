@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +45,11 @@ public class OrderRequestRedisSyncStateService {
     public void clearPending(UUID requestId, long desiredVersion) {
         OrderRequest request = findForUpdate(requestId);
         request.completeRedisSync(desiredVersion);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void defer(UUID requestId, Instant nextAttemptAt) {
+        findForUpdate(requestId).deferRedisSync(nextAttemptAt);
     }
 
     private OrderRequest findForUpdate(UUID requestId) {
