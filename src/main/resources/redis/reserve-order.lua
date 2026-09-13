@@ -41,6 +41,7 @@ redis.call(
         KEYS[3],
         'requestId', request_id,
         'fingerprint', fingerprint,
+        'quantity', quantity,
         'status', 'RESERVED'
 )
 redis.call('EXPIRE', KEYS[3], 86400)
