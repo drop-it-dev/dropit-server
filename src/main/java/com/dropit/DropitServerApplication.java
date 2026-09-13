@@ -7,8 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableJpaAuditing
+@EnableScheduling
 @EnableConfigurationProperties({JwtProperties.class, SqsProperties.class})
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 public class DropitServerApplication {

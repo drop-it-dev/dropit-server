@@ -5,6 +5,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.order.sqs")
 public record SqsProperties(
         String orderQueueUrl,
-        boolean consumerEnabled
+        boolean consumerEnabled,
+        int consumerMaxNumberOfMessages,
+        int consumerWaitTimeSeconds,
+        int consumerVisibilityTimeoutSeconds,
+        long consumerInitialDelay,
+        long consumerPollDelay
 ) {
 }
