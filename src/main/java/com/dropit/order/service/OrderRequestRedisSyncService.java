@@ -5,8 +5,6 @@ import com.dropit.order.redis.OrderRequestSyncResult;
 import com.dropit.order.redis.RedisOrderFinalizationSyncAdapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -18,7 +16,6 @@ public class OrderRequestRedisSyncService {
     private final OrderRequestRedisSyncStateService stateService;
     private final RedisOrderFinalizationSyncAdapter syncAdapter;
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void sync(UUID requestId) {
         Optional<OrderRequestSyncCommand> pendingCommand = stateService.loadPending(requestId);
         if (pendingCommand.isEmpty()) {
