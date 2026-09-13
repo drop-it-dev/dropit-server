@@ -98,11 +98,17 @@ do {
         $state = docker inspect --format '{{.State.Status}}' $containerName
 
         if ($state -ne 'running') {
-            docker logs --tail 80 $containerName
+            & cmd.exe /d /c "docker logs --tail 80 $containerName 2>&1"
             throw "Spring container stopped during startup: $containerName"
         }
 
-        $logs = docker logs $containerName 2>&1
+        # Windows PowerShell 5.1 treats normal container stderr as a NativeCommandError.
+        # cmd.exe merges both streams so startup messages can be inspected as plain text.
+        $logs = & cmd.exe /d /c "docker logs $containerName 2>&1"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Spring container logs could not be read: $containerName"
+        }
+
         if ($logs -match 'Started DropitServerApplication') {
             $startedCount++
         }
@@ -137,7 +143,7 @@ do {
     $gatewayState = docker inspect --format '{{.State.Status}}' dropit-performance-gateway
 
     if ($gatewayState -ne 'running') {
-        docker logs --tail 80 dropit-performance-gateway
+        & cmd.exe /d /c 'docker logs --tail 80 dropit-performance-gateway 2>&1'
         throw "Nginx gateway state: $gatewayState"
     }
 
