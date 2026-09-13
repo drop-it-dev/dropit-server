@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record SqsProperties(
         String orderQueueUrl,
         boolean consumerEnabled,
+        int consumerConcurrency,
         int consumerMaxNumberOfMessages,
         int consumerWaitTimeSeconds,
         int consumerVisibilityTimeoutSeconds,
