@@ -6,7 +6,7 @@
 -- KEYS[2] = {drop:<dropId>}:stock
 -- KEYS[3] = {drop:<dropId>}:purchase:user:<userId>
 -- ARGV[1] = requestId, ARGV[2] = 최종 상태(SUCCEEDED/FAILED), ARGV[3] = quantity,
--- ARGV[4] = orderId, ARGV[5] = failureCode, ARGV[6] = DB 동기화 버전
+-- ARGV[4] = orderId, ARGV[5] = failureCode, ARGV[6] = DB 동기화 버전, ARGV[7] = userId
 local reservationKey = KEYS[1]
 local stockKey = KEYS[2]
 local purchaseKey = KEYS[3]
@@ -17,6 +17,7 @@ local quantity = tonumber(ARGV[3])
 local orderId = ARGV[4]
 local failureCode = ARGV[5]
 local desiredVersion = ARGV[6]
+local userId = ARGV[7]
 
 if redis.call('TYPE', reservationKey).ok ~= 'hash' then
     -- 어떤 예약을 확정해야 하는지 모르므로 재고·구매량을 임의로 바꾸지 않는다.
@@ -29,31 +30,34 @@ if redis.call('HGET', reservationKey, 'requestId') ~= requestId then
 end
 
 local currentStatus = redis.call('HGET', reservationKey, 'status')
+if tonumber(redis.call('HGET', reservationKey, 'quantity')) ~= quantity then
+    -- 같은 키가 재사용됐더라도 DB 요청 수량과 다른 예약은 절대 변경하지 않는다.
+    return 'INVALID'
+end
 if currentStatus == targetStatus then
     -- 같은 SQS 메시지가 다시 와도 이미 끝난 작업이므로 아무것도 하지 않는다.
     return 'ALREADY_APPLIED'
 end
-if currentStatus ~= 'RESERVED' then
+if targetStatus == 'CANCELED' then
+    if currentStatus ~= 'RESERVED' and currentStatus ~= 'SUCCEEDED' then
+        return 'INVALID'
+    end
+elseif currentStatus ~= 'RESERVED' then
     -- 이미 다른 최종 상태가 기록됐다면 그 결정을 바꾸지 않는다.
     return 'INVALID'
 end
-if tonumber(redis.call('HGET', reservationKey, 'quantity')) ~= quantity then
-    -- DB 요청과 Redis 예약의 수량이 다르면 잘못된 수량을 복원할 수 있으므로 중단한다.
-    return 'INVALID'
-end
-
-if targetStatus == 'FAILED' then
+if targetStatus == 'FAILED' or targetStatus == 'CANCELED' then
     -- DB 주문 생성이 실패했으므로 Redis에 미리 잡아 둔 자리를 다시 돌려준다.
     if redis.call('TYPE', stockKey).ok ~= 'string'
-            or redis.call('TYPE', purchaseKey).ok ~= 'string' then
+            or redis.call('TYPE', purchaseKey).ok ~= 'hash' then
         return 'INVALID'
     end
-    local purchased = tonumber(redis.call('GET', purchaseKey))
+    local purchased = tonumber(redis.call('HGET', purchaseKey, userId))
     if not purchased or purchased < quantity then
         return 'INVALID'
     end
     redis.call('INCRBY', stockKey, quantity)
-    redis.call('DECRBY', purchaseKey, quantity)
+    redis.call('HINCRBY', purchaseKey, userId, -quantity)
 elseif targetStatus ~= 'SUCCEEDED' then
     -- 예약은 성공 확정 또는 실패 반환만 가능하다.
     return 'INVALID'

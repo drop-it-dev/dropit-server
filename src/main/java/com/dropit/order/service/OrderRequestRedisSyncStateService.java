@@ -28,14 +28,15 @@ public class OrderRequestRedisSyncStateService {
 
         return Optional.of(new OrderRequestSyncCommand(
                 request.getId(),
-                request.getStatus(),
+                request.getDesiredRedisState(),
                 request.getOrderId(),
                 request.getUserId(),
                 request.getDropId(),
                 request.getIdempotencyKeyHash(),
                 request.getQuantity(),
                 request.getFailureCode(),
-                request.getDesiredVersion()
+                request.getDesiredVersion(),
+                request.getRedisExpiresAt()
         ));
     }
 

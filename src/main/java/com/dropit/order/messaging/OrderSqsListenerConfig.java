@@ -35,6 +35,15 @@ public class OrderSqsListenerConfig {
     }
 
     private void validate(SqsProperties properties) {
+        if (properties.publisherTimeoutMillis() <= 0) {
+            throw new IllegalArgumentException("app.order.sqs.publisher-timeout-millis must be positive");
+        }
+        if (!properties.consumerEnabled()) {
+            return;
+        }
+        if (properties.orderQueueUrl() == null || properties.orderQueueUrl().isBlank()) {
+            throw new IllegalArgumentException("app.order.sqs.order-queue-url must be configured");
+        }
         requireRange(properties.consumerConcurrency(), 1, Integer.MAX_VALUE,
                 "app.order.sqs.consumer-concurrency");
         requireRange(properties.consumerMaxNumberOfMessages(), 1, 10,
@@ -43,13 +52,6 @@ public class OrderSqsListenerConfig {
                 "app.order.sqs.consumer-wait-time-seconds");
         requireRange(properties.consumerVisibilityTimeoutSeconds(), 0, 43_200,
                 "app.order.sqs.consumer-visibility-timeout-seconds");
-        if (properties.publisherTimeoutMillis() <= 0) {
-            throw new IllegalArgumentException("app.order.sqs.publisher-timeout-millis must be positive");
-        }
-        if (properties.consumerEnabled()
-                && (properties.orderQueueUrl() == null || properties.orderQueueUrl().isBlank())) {
-            throw new IllegalArgumentException("app.order.sqs.order-queue-url must be configured");
-        }
     }
 
     private void requireRange(int value, int min, int max, String propertyName) {

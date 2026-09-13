@@ -23,7 +23,7 @@ public class RedisOrderFinalizationSyncAdapter {
                         RedisOrderKeyFactory.idempotencyKey(
                                 command.dropId(),
                                 command.userId(),
-                                command.idempotencyKeyHash()
+                command.idempotencyKeyHash()
                         ),
                         RedisOrderKeyFactory.stockKey(command.dropId()),
                         RedisOrderKeyFactory.purchaseKey(command.dropId(), command.userId())
@@ -33,7 +33,8 @@ public class RedisOrderFinalizationSyncAdapter {
                 Integer.toString(command.quantity()),
                 command.orderId() == null ? "" : command.orderId().toString(),
                 command.failureCode() == null ? "" : command.failureCode(),
-                Long.toString(command.desiredVersion())
+                Long.toString(command.desiredVersion()),
+                command.userId().toString()
         );
         if (result == null) {
             throw new IllegalStateException("Redis 주문 최종 상태 반영 결과가 없습니다.");
