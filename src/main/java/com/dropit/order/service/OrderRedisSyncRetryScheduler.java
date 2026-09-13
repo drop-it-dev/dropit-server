@@ -4,6 +4,7 @@ import com.dropit.order.entity.OrderRequest;
 import com.dropit.order.repository.OrderRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import java.time.Duration;
@@ -11,6 +12,11 @@ import java.time.Instant;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(
+        prefix = "app.order.sqs",
+        name = "consumer-enabled",
+        havingValue = "true"
+)
 @RequiredArgsConstructor
 public class OrderRedisSyncRetryScheduler {
 
