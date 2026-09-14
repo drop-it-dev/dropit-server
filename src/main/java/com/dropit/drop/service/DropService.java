@@ -2,7 +2,6 @@ package com.dropit.drop.service;
 
 import com.dropit.drop.cache.DropDetailCacheReader;
 import com.dropit.drop.cache.DropDetailCacheValue;
-import com.dropit.drop.cache.DropStockReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
@@ -10,6 +9,7 @@ import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
 import com.dropit.drop.repository.DropRepository;
+import com.dropit.drop.repository.DropLiveState;
 import com.dropit.global.config.RedisCacheConfig;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.product.entity.Product;
@@ -32,7 +32,6 @@ public class DropService {
     private final DropRepository dropRepository;
     private final ProductRepository productRepository;
     private final DropDetailCacheReader dropDetailCacheReader;
-    private final DropStockReader dropStockReader;
 
     @Transactional
     public Long save(Long userId, DropCreateRequest request) {
@@ -70,9 +69,19 @@ public class DropService {
 
     public DropResponse getOne(Long dropId) {
         DropDetailCacheValue detail = dropDetailCacheReader.get(dropId);
-        int remainingQuantity = dropStockReader.getRemainingQuantity(dropId);
+        DropLiveState liveState = dropRepository.findLiveStateById(dropId)
+                .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
 
-        return DropResponse.from(detail, remainingQuantity, LocalDateTime.now());
+        if (!liveState.isVisible()) {
+            throw new ServiceException(DropErrorCode.DROP_NOT_FOUND);
+        }
+
+        return DropResponse.from(
+                detail,
+                liveState.getRemainingQuantity(),
+                liveState.isVisible(),
+                LocalDateTime.now()
+        );
     }
 
     @Transactional(readOnly = true)

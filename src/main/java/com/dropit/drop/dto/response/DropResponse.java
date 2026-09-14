@@ -63,6 +63,7 @@ public record DropResponse(
     public static DropResponse from(
             DropDetailCacheValue detail,
             int remainingQuantity,
+            boolean visible,
             LocalDateTime now
     ) {
         return new DropResponse(
@@ -78,7 +79,7 @@ public record DropResponse(
                 remainingQuantity,
                 detail.initialQuantity() - remainingQuantity,
                 detail.purchaseLimit(),
-                detail.visible(),
+                visible,
                 detail.openAt(),
                 detail.closeAt(),
                 DropStatus.resolve(

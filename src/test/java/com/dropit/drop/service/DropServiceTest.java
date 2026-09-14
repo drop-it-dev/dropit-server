@@ -2,7 +2,6 @@ package com.dropit.drop.service;
 
 import com.dropit.drop.cache.DropDetailCacheReader;
 import com.dropit.drop.cache.DropDetailCacheValue;
-import com.dropit.drop.cache.DropStockReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
@@ -11,6 +10,7 @@ import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
 import com.dropit.drop.repository.DropRepository;
+import com.dropit.drop.repository.DropLiveState;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.product.entity.Product;
 import com.dropit.product.exception.ProductErrorCode;
@@ -51,9 +51,6 @@ class DropServiceTest {
 
     @Mock
     private DropDetailCacheReader dropDetailCacheReader;
-
-    @Mock
-    private DropStockReader dropStockReader;
 
     @InjectMocks
     private DropService dropService;
@@ -117,7 +114,7 @@ class DropServiceTest {
     void getOneDrop() {
         Drop drop = saveDrop(1L, 10L, 100L, LocalDateTime.now().plusDays(1));
         when(dropDetailCacheReader.get(100L)).thenReturn(DropDetailCacheValue.from(drop));
-        when(dropStockReader.getRemainingQuantity(100L)).thenReturn(7);
+        when(dropRepository.findLiveStateById(100L)).thenReturn(Optional.of(liveState(7, true)));
 
         DropResponse response = dropService.getOne(100L);
 
@@ -227,7 +224,22 @@ class DropServiceTest {
         );
 
         assertEquals(DropErrorCode.DROP_NOT_FOUND, exception.getErrorCode());
-        verifyNoInteractions(dropStockReader);
+        verify(dropRepository, never()).findLiveStateById(anyLong());
+    }
+
+    @Test
+    @DisplayName("캐시된 상세 정보가 있어도 현재 비공개 드랍은 조회할 수 없다")
+    void rejectDropHiddenAfterMetadataWasCached() {
+        Drop drop = saveDrop(1L, 10L, 100L, LocalDateTime.now().plusDays(1));
+        when(dropDetailCacheReader.get(100L)).thenReturn(DropDetailCacheValue.from(drop));
+        when(dropRepository.findLiveStateById(100L)).thenReturn(Optional.of(liveState(10, false)));
+
+        ServiceException exception = assertThrows(
+                ServiceException.class,
+                () -> dropService.getOne(100L)
+        );
+
+        assertEquals(DropErrorCode.DROP_NOT_FOUND, exception.getErrorCode());
     }
 
     @Test
@@ -320,6 +332,20 @@ class DropServiceTest {
         drop.changeVisibility(true);
         ReflectionTestUtils.setField(drop, "id", dropId);
         return drop;
+    }
+
+    private DropLiveState liveState(int remainingQuantity, boolean visible) {
+        return new DropLiveState() {
+            @Override
+            public int getRemainingQuantity() {
+                return remainingQuantity;
+            }
+
+            @Override
+            public boolean isVisible() {
+                return visible;
+            }
+        };
     }
 
     private Product saveProduct(Long sellerId, Long productId) {
