@@ -1,0 +1,161 @@
+param(
+    [ValidateRange(4, 4)]
+    [int]$InstanceCount = 4,
+
+    [string]$JarPath = 'tmp\dropit-server-performance.jar'
+)
+
+$ErrorActionPreference = 'Stop'
+
+$performanceDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectDirectory = Split-Path -Parent $performanceDirectory
+$environmentFile = Join-Path $projectDirectory '.env.local'
+$composeFile = Join-Path $projectDirectory 'compose.yml'
+$performanceComposeFile = Join-Path $performanceDirectory 'compose.performance.yml'
+$nginxConfig = Join-Path $performanceDirectory 'nginx\drop-detail-cluster.conf'
+
+if (-not [System.IO.Path]::IsPathRooted($JarPath)) {
+    $JarPath = Join-Path $projectDirectory $JarPath
+}
+
+foreach ($requiredFile in @($environmentFile, $composeFile, $performanceComposeFile, $nginxConfig, $JarPath)) {
+    if (-not (Test-Path -LiteralPath $requiredFile)) {
+        throw "Required file is missing: $requiredFile"
+    }
+}
+
+docker compose `
+    --file $composeFile `
+    --env-file $environmentFile `
+    up --detach db redis | Out-Null
+
+if ($LASTEXITCODE -ne 0) {
+    throw 'MySQL or Redis could not be started.'
+}
+
+docker compose `
+    --file $performanceComposeFile `
+    --env-file (Join-Path $projectDirectory '.env.performance.local') `
+    up --detach influxdb grafana | Out-Null
+
+if ($LASTEXITCODE -ne 0) {
+    throw 'InfluxDB or Grafana could not be started.'
+}
+
+$singleApp = docker ps -a --filter 'name=^/dropit-performance-app$' --format '{{.Names}}'
+if ($singleApp) {
+    docker rm --force dropit-performance-app | Out-Null
+}
+
+$existingGateway = docker ps -a --filter 'name=^/dropit-performance-gateway$' --format '{{.Names}}'
+if ($existingGateway) {
+    docker rm --force dropit-performance-gateway | Out-Null
+}
+
+for ($index = 1; $index -le $InstanceCount; $index++) {
+    $containerName = "dropit-performance-app-$index"
+    $existingApp = docker ps -a --filter "name=^/$containerName$" --format '{{.Names}}'
+
+    if ($existingApp) {
+        docker rm --force $containerName | Out-Null
+    }
+
+    docker run `
+        --detach `
+        --name $containerName `
+        --network dropit_default `
+        --memory 768m `
+        --env-file $environmentFile `
+        --env DB_HOST=db `
+        --env DB_PORT=3306 `
+        --env REDIS_HOST=redis `
+        --env REDIS_PORT=6379 `
+        --env SPRING_PROFILES_ACTIVE=performance `
+        --env SPRING_JPA_HIBERNATE_DDL_AUTO=none `
+        --env 'spring.jpa.hibernate.ddl-auto=none' `
+        --env 'JAVA_TOOL_OPTIONS=-Xms128m -Xmx512m' `
+        --mount "type=bind,source=$JarPath,destination=/app/app.jar,readonly" `
+        eclipse-temurin:21-jre `
+        java -jar /app/app.jar | Out-Null
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Spring container could not be started: $containerName"
+    }
+
+    docker network connect dropit-performance_default $containerName
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Spring container could not join the performance network: $containerName"
+    }
+}
+
+$deadline = (Get-Date).AddSeconds(120)
+do {
+    $startedCount = 0
+
+    for ($index = 1; $index -le $InstanceCount; $index++) {
+        $containerName = "dropit-performance-app-$index"
+        $state = docker inspect --format '{{.State.Status}}' $containerName
+
+        if ($state -ne 'running') {
+            & cmd.exe /d /c "docker logs --tail 80 $containerName 2>&1"
+            throw "Spring container stopped during startup: $containerName"
+        }
+
+        # Windows PowerShell 5.1 treats normal container stderr as a NativeCommandError.
+        # cmd.exe merges both streams so startup messages can be inspected as plain text.
+        $logs = & cmd.exe /d /c "docker logs $containerName 2>&1"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Spring container logs could not be read: $containerName"
+        }
+
+        if ($logs -match 'Started DropitServerApplication') {
+            $startedCount++
+        }
+    }
+
+    if ($startedCount -eq $InstanceCount) {
+        break
+    }
+
+    Start-Sleep -Seconds 3
+} while ((Get-Date) -lt $deadline)
+
+if ($startedCount -ne $InstanceCount) {
+    throw "Only $startedCount of $InstanceCount Spring containers became ready."
+}
+
+docker run `
+    --detach `
+    --name dropit-performance-gateway `
+    --network dropit-performance_default `
+    --publish '127.0.0.1:8080:8080' `
+    --mount "type=bind,source=$nginxConfig,destination=/etc/nginx/nginx.conf,readonly" `
+    nginx:1.29-alpine | Out-Null
+
+if ($LASTEXITCODE -ne 0) {
+    throw 'Nginx gateway could not be started.'
+}
+
+$deadline = (Get-Date).AddSeconds(30)
+do {
+    Start-Sleep -Seconds 2
+    $gatewayState = docker inspect --format '{{.State.Status}}' dropit-performance-gateway
+
+    if ($gatewayState -ne 'running') {
+        & cmd.exe /d /c 'docker logs --tail 80 dropit-performance-gateway 2>&1'
+        throw "Nginx gateway state: $gatewayState"
+    }
+
+    $listener = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+
+    if ($listener) {
+        Write-Host "Drop performance cluster is ready: $InstanceCount Spring instances and Nginx."
+        Write-Host 'Docker test URL: http://dropit-performance-gateway:8080'
+        Write-Host 'Host test URL: http://localhost:8080'
+        exit 0
+    }
+} while ((Get-Date) -lt $deadline)
+
+throw 'Nginx gateway did not bind port 8080.'
