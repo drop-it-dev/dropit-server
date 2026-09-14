@@ -29,7 +29,7 @@ public class DropVisibilityService {
     private final DropSaleCacheWriter cacheWriter;
     private final TransactionTemplate transactionTemplate;
 
-    @CacheEvict(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId")
+    @CacheEvict(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId", beforeInvocation = true)
     public DropResponse changeVisibility(Long sellerId, Long dropId, DropVisibilityUpdateRequest request) {
         ChangeResult result = transactionTemplate.execute(status -> changeInTransaction(sellerId, dropId, request));
         if (result == null) {
