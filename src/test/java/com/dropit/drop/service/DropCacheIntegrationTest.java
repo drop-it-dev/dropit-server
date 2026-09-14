@@ -34,7 +34,16 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@SpringBootTest(properties = "spring.jpa.hibernate.ddl-auto=none")
+@SpringBootTest(properties = {
+        "spring.jpa.hibernate.ddl-auto=none",
+        "app.order.sqs.order-queue-url=http://localhost:4566/000000000000/test-order-queue",
+        "app.order.sqs.consumer-enabled=false",
+        "app.order.sqs.consumer-concurrency=1",
+        "app.order.sqs.consumer-max-number-of-messages=1",
+        "app.order.sqs.consumer-wait-time-seconds=1",
+        "app.order.sqs.consumer-visibility-timeout-seconds=60",
+        "app.order.sqs.publisher-timeout-millis=3000"
+})
 class DropCacheIntegrationTest {
 
     @Autowired
