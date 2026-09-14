@@ -1,5 +1,6 @@
 package com.dropit.product.concurrency;
 
+import com.dropit.drop.cache.DropDetailCacheReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.repository.DropRepository;
 import com.dropit.drop.service.DropService;
@@ -74,6 +75,9 @@ class ProductDropConcurrencyTest {
 
     @MockitoBean
     private S3ImageService s3ImageService;
+
+    @MockitoBean
+    private DropDetailCacheReader dropDetailCacheReader;
 
     @DynamicPropertySource
     static void registerDatasourceProperties(DynamicPropertyRegistry registry) {

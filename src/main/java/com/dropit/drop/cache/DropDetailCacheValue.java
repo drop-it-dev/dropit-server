@@ -20,7 +20,6 @@ public record DropDetailCacheValue(
         int discountRate,
         int initialQuantity,
         int purchaseLimit,
-        boolean visible,
         LocalDateTime openAt,
         LocalDateTime closeAt
 ) {
@@ -36,7 +35,6 @@ public record DropDetailCacheValue(
                 drop.getDiscountRate(),
                 drop.getInitialQuantity(),
                 drop.getPurchaseLimit(),
-                drop.isVisible(),
                 drop.getOpenAt(),
                 drop.getCloseAt()
         );

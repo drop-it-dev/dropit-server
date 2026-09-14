@@ -15,7 +15,6 @@ public enum DropErrorCode implements ErrorCode {
     INVALID_DROP_PERIOD(HttpStatus.BAD_REQUEST, "판매 종료 시각은 시작 시각보다 늦어야 합니다."),
     DROP_SALE_PREPARED(HttpStatus.CONFLICT, "판매 준비가 완료되어 판매 설정을 변경할 수 없습니다."),
     DROP_ADMISSION_NOT_READY(HttpStatus.SERVICE_UNAVAILABLE, "주문 접수용 판매 상태를 준비할 수 없습니다."),
-    DROP_STOCK_NOT_READY(HttpStatus.SERVICE_UNAVAILABLE, "실시간 재고 정보를 확인할 수 없습니다."),
     DROP_ALREADY_STARTED(HttpStatus.CONFLICT, "이미 판매가 시작된 드랍입니다.");
 
     private final HttpStatus status;

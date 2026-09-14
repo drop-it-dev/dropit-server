@@ -1,6 +1,8 @@
 package com.dropit.global.config;
 
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.annotation.CachingConfigurer;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -13,7 +15,7 @@ import java.time.Duration;
 
 @Configuration
 @EnableCaching
-public class RedisCacheConfig {
+public class RedisCacheConfig implements CachingConfigurer {
 
     public static final String DROP_DETAIL_CACHE = "dropDetail";
     public static final Duration DROP_DETAIL_TTL = Duration.ofSeconds(3);
@@ -40,5 +42,10 @@ public class RedisCacheConfig {
                 .transactionAware()
                 .enableStatistics()
                 .build();
+    }
+
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new FailOpenCacheErrorHandler();
     }
 }
