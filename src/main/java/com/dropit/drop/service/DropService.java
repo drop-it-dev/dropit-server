@@ -1,5 +1,8 @@
 package com.dropit.drop.service;
 
+import com.dropit.drop.cache.DropDetailCacheReader;
+import com.dropit.drop.cache.DropDetailCacheValue;
+import com.dropit.drop.cache.DropStockReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
@@ -14,7 +17,6 @@ import com.dropit.product.exception.ProductErrorCode;
 import com.dropit.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,8 @@ public class DropService {
 
     private final DropRepository dropRepository;
     private final ProductRepository productRepository;
+    private final DropDetailCacheReader dropDetailCacheReader;
+    private final DropStockReader dropStockReader;
 
     @Transactional
     public Long save(Long userId, DropCreateRequest request) {
@@ -64,16 +68,11 @@ public class DropService {
         return drops.map(DropResponse::from);
     }
 
-    @Cacheable(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId", sync = true)
     public DropResponse getOne(Long dropId) {
-        Drop drop = dropRepository.findDetailById(dropId)
-                .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
+        DropDetailCacheValue detail = dropDetailCacheReader.get(dropId);
+        int remainingQuantity = dropStockReader.getRemainingQuantity(dropId);
 
-        if (!drop.isVisible()) {
-            throw new ServiceException(DropErrorCode.DROP_NOT_FOUND);
-        }
-
-        return DropResponse.from(drop);
+        return DropResponse.from(detail, remainingQuantity, LocalDateTime.now());
     }
 
     @Transactional(readOnly = true)

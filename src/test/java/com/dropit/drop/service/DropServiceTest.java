@@ -1,5 +1,8 @@
 package com.dropit.drop.service;
 
+import com.dropit.drop.cache.DropDetailCacheReader;
+import com.dropit.drop.cache.DropDetailCacheValue;
+import com.dropit.drop.cache.DropStockReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
@@ -45,6 +48,12 @@ class DropServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private DropDetailCacheReader dropDetailCacheReader;
+
+    @Mock
+    private DropStockReader dropStockReader;
 
     @InjectMocks
     private DropService dropService;
@@ -107,12 +116,15 @@ class DropServiceTest {
     @DisplayName("공개된 드랍 상세 정보를 조회할 수 있다")
     void getOneDrop() {
         Drop drop = saveDrop(1L, 10L, 100L, LocalDateTime.now().plusDays(1));
-        when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(drop));
+        when(dropDetailCacheReader.get(100L)).thenReturn(DropDetailCacheValue.from(drop));
+        when(dropStockReader.getRemainingQuantity(100L)).thenReturn(7);
 
         DropResponse response = dropService.getOne(100L);
 
         assertEquals(100L, response.id());
         assertEquals(10L, response.productId());
+        assertEquals(7, response.remainingQuantity());
+        assertEquals(3, response.soldQuantity());
     }
 
     @Test
@@ -206,17 +218,8 @@ class DropServiceTest {
     @Test
     @DisplayName("비공개 드랍 상세 조회는 존재하지 않는 드랍으로 처리한다")
     void rejectHiddenDropFromPublicDetail() {
-        Product product = saveProduct(1L, 10L);
-        Drop hiddenDrop = new Drop(
-                product,
-                new BigDecimal("59000"),
-                10,
-                20,
-                2,
-                LocalDateTime.now().plusDays(1),
-                LocalDateTime.now().plusDays(2)
-        );
-        when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(hiddenDrop));
+        when(dropDetailCacheReader.get(100L))
+                .thenThrow(new ServiceException(DropErrorCode.DROP_NOT_FOUND));
 
         ServiceException exception = assertThrows(
                 ServiceException.class,
@@ -224,6 +227,7 @@ class DropServiceTest {
         );
 
         assertEquals(DropErrorCode.DROP_NOT_FOUND, exception.getErrorCode());
+        verifyNoInteractions(dropStockReader);
     }
 
     @Test

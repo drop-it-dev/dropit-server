@@ -1,11 +1,15 @@
 package com.dropit.drop.service;
 
+import com.dropit.drop.cache.DropDetailCacheValue;
 import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.config.RedisCacheConfig;
 import com.dropit.global.storage.S3ImageService;
+import com.dropit.order.redis.RedisOrderKeyFactory;
+import com.dropit.order.repository.DropUserPurchaseRepository;
+import com.dropit.order.repository.OrderItemRepository;
 import com.dropit.product.entity.Product;
 import com.dropit.user.entity.User;
 import com.dropit.user.entity.UserRole;
@@ -15,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -36,13 +41,25 @@ class DropCacheIntegrationTest {
     private DropService dropService;
 
     @Autowired
+    private DropVisibilityService dropVisibilityService;
+
+    @Autowired
     private CacheManager cacheManager;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @MockitoBean
     private DropRepository dropRepository;
 
     @MockitoBean
     private S3ImageService s3ImageService;
+
+    @MockitoBean
+    private OrderItemRepository orderItemRepository;
+
+    @MockitoBean
+    private DropUserPurchaseRepository purchaseRepository;
 
     private Cache dropDetailCache;
 
@@ -51,29 +68,49 @@ class DropCacheIntegrationTest {
         dropDetailCache = cacheManager.getCache(RedisCacheConfig.DROP_DETAIL_CACHE);
         assertNotNull(dropDetailCache);
         dropDetailCache.clear();
+        redisTemplate.delete(RedisOrderKeyFactory.stockKey(100L));
     }
 
     @Test
     void repeatedDetailRequestUsesRedisCache() {
         Drop drop = visibleDrop();
         when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(drop));
+        redisTemplate.opsForValue().set(RedisOrderKeyFactory.stockKey(100L), "100");
 
         DropResponse first = dropService.getOne(100L);
         DropResponse second = dropService.getOne(100L);
 
         assertEquals(first, second);
         verify(dropRepository, times(1)).findDetailById(100L);
-        assertNotNull(dropDetailCache.get(100L, DropResponse.class));
+        assertNotNull(dropDetailCache.get(100L, DropDetailCacheValue.class));
+    }
+
+    @Test
+    void changedRedisStockIsReflectedWithoutReloadingMetadata() {
+        Drop drop = visibleDrop();
+        when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(drop));
+        String stockKey = RedisOrderKeyFactory.stockKey(100L);
+        redisTemplate.opsForValue().set(stockKey, "100");
+
+        DropResponse first = dropService.getOne(100L);
+        redisTemplate.opsForValue().set(stockKey, "97");
+        DropResponse second = dropService.getOne(100L);
+
+        assertEquals(100, first.remainingQuantity());
+        assertEquals(97, second.remainingQuantity());
+        assertEquals(3, second.soldQuantity());
+        verify(dropRepository, times(1)).findDetailById(100L);
     }
 
     @Test
     void changingVisibilityEvictsCachedDetail() {
         Drop drop = visibleDrop();
         when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(drop));
-        when(dropRepository.findById(100L)).thenReturn(Optional.of(drop));
+        when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
+        redisTemplate.opsForValue().set(RedisOrderKeyFactory.stockKey(100L), "100");
         dropService.getOne(100L);
 
-        dropService.changeVisibility(1L, 100L, new DropVisibilityUpdateRequest(false));
+        dropVisibilityService.changeVisibility(1L, 100L, new DropVisibilityUpdateRequest(false));
 
         assertNull(dropDetailCache.get(100L));
     }
