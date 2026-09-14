@@ -7,10 +7,12 @@ import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
 import com.dropit.drop.repository.DropRepository;
+import com.dropit.global.config.RedisCacheConfig;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.order.repository.DropUserPurchaseRepository;
 import com.dropit.order.repository.OrderItemRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -27,6 +29,7 @@ public class DropVisibilityService {
     private final DropSaleCacheWriter cacheWriter;
     private final TransactionTemplate transactionTemplate;
 
+    @CacheEvict(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId", beforeInvocation = true)
     public DropResponse changeVisibility(Long sellerId, Long dropId, DropVisibilityUpdateRequest request) {
         ChangeResult result = transactionTemplate.execute(status -> changeInTransaction(sellerId, dropId, request));
         if (result == null) {
