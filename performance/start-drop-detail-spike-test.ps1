@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Before', 'Query', 'After')]
+    [ValidateSet('Before', 'Query', 'After', 'LiveStock')]
     [string]$Phase,
 
     [Parameter(Mandatory = $true)]
@@ -17,7 +17,10 @@ param(
     [int]$PreAllocatedVUs = 200,
 
     [ValidateRange(1, 1000000)]
-    [int]$MaxVUs = 2000
+    [int]$MaxVUs = 2000,
+
+    [ValidateRange(0, [int]::MaxValue)]
+    [int]$StockQuantity = 100
 )
 
 $ErrorActionPreference = 'Stop'
@@ -103,6 +106,16 @@ $authToken = $tokenResponse.accessToken
 
 if (-not $authToken) {
     throw 'Access token was not returned by the login API.'
+}
+
+$redisContainer = docker ps --filter 'name=redis' --format '{{.Names}}' | Select-Object -First 1
+if (-not $redisContainer) {
+    throw 'Redis container is not running.'
+}
+
+docker exec $redisContainer redis-cli SET "{drop:$DropId}:stock" $StockQuantity | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw 'The Drop stock key could not be prepared.'
 }
 
 try {

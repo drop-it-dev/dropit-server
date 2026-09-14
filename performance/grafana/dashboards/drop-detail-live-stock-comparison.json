@@ -1,0 +1,97 @@
+{
+  "annotations": { "list": [] },
+  "description": "DropResponse 전체 캐시와 정적 메타데이터 캐시 + 실시간 Redis 재고 결합 구조의 측정 결과 비교",
+  "editable": true,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "datasource": { "type": "influxdb", "uid": "k6-influxdb" },
+      "fieldConfig": { "defaults": { "decimals": 2, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "query": "SELECT last(\"avg_ms\") FROM \"drop_detail_spike_summary\" WHERE (\"stage\" = 'after') AND $timeFilter", "rawQuery": true, "refId": "A", "resultFormat": "time_series" }],
+      "title": "기존 전체 응답 캐시 · 평균",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "k6-influxdb" },
+      "fieldConfig": { "defaults": { "decimals": 2, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "query": "SELECT last(\"p95_ms\") FROM \"drop_detail_spike_summary\" WHERE (\"stage\" = 'after') AND $timeFilter", "rawQuery": true, "refId": "A", "resultFormat": "time_series" }],
+      "title": "기존 전체 응답 캐시 · p95",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "k6-influxdb" },
+      "fieldConfig": { "defaults": { "decimals": 2, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "query": "SELECT last(\"avg_ms\") FROM \"drop_detail_spike_summary\" WHERE (\"stage\" = 'livestock') AND $timeFilter", "rawQuery": true, "refId": "A", "resultFormat": "time_series" }],
+      "title": "실시간 재고 결합 · 평균",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "k6-influxdb" },
+      "fieldConfig": { "defaults": { "decimals": 2, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "query": "SELECT last(\"p95_ms\") FROM \"drop_detail_spike_summary\" WHERE (\"stage\" = 'livestock') AND $timeFilter", "rawQuery": true, "refId": "A", "resultFormat": "time_series" }],
+      "title": "실시간 재고 결합 · p95",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "k6-influxdb" },
+      "fieldConfig": { "defaults": { "decimals": 2, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 5 },
+      "id": 5,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "query": "SELECT last(\"avg_ms\") FROM \"drop_detail_concurrent_summary\" WHERE (\"stage\" = 'optimized') AND $timeFilter", "rawQuery": true, "refId": "A", "resultFormat": "time_series" }],
+      "title": "기존 10K 동시 요청 · 평균",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "k6-influxdb" },
+      "fieldConfig": { "defaults": { "decimals": 2, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 5 },
+      "id": 6,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "query": "SELECT last(\"p95_ms\") FROM \"drop_detail_concurrent_summary\" WHERE (\"stage\" = 'optimized') AND $timeFilter", "rawQuery": true, "refId": "A", "resultFormat": "time_series" }],
+      "title": "기존 10K 동시 요청 · p95",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "k6-influxdb" },
+      "fieldConfig": { "defaults": { "decimals": 2, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 5 },
+      "id": 7,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "query": "SELECT last(\"avg_ms\") FROM \"drop_detail_concurrent_summary\" WHERE (\"stage\" = 'livestock') AND $timeFilter", "rawQuery": true, "refId": "A", "resultFormat": "time_series" }],
+      "title": "실시간 재고 10K · 평균",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "k6-influxdb" },
+      "fieldConfig": { "defaults": { "decimals": 2, "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 5 },
+      "id": 8,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [{ "query": "SELECT last(\"p95_ms\") FROM \"drop_detail_concurrent_summary\" WHERE (\"stage\" = 'livestock') AND $timeFilter", "rawQuery": true, "refId": "A", "resultFormat": "time_series" }],
+      "title": "실시간 재고 10K · p95",
+      "type": "stat"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["k6", "drop", "redis", "live-stock"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30d", "to": "now" },
+  "timezone": "browser",
+  "title": "Drop Detail Cache Correctness and Load Comparison",
+  "uid": "drop-detail-live-stock",
+  "version": 1
+}
