@@ -7,10 +7,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 public interface DropUserPurchaseRepository extends JpaRepository<DropUserPurchase, Long> {
 
+    boolean existsByDropId(Long dropId);
+
     Optional<DropUserPurchase> findByDropIdAndUserId(Long dropId, Long userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from DropUserPurchase p where p.dropId = :dropId and p.userId = :userId")
+    Optional<DropUserPurchase> findByDropIdAndUserIdForUpdate(
+            @Param("dropId") Long dropId,
+            @Param("userId") Long userId
+    );
 
     @Modifying
     @Query(value = """

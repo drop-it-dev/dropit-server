@@ -4,17 +4,21 @@ import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropSortType;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.entity.DropStatus;
-import com.dropit.global.storage.S3ImageService;
+import com.dropit.global.config.QuerydslConfig;
 import com.dropit.product.entity.Product;
 import com.dropit.user.entity.User;
 import com.dropit.user.entity.UserRole;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.mysql.MySQLContainer;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,13 +27,26 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** 로컬 MySQL에서 실행하며 픽스처는 트랜잭션 롤백으로 정리한다. */
-@SpringBootTest(properties = "spring.jpa.hibernate.ddl-auto=none")
+@DataJpaTest(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(QuerydslConfig.class)
 @Transactional
 class DropSearchIntegrationTest {
+    private static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4");
+
+    static {
+        MYSQL.start();
+    }
+
     @Autowired EntityManager em;
     @Autowired DropRepository repository;
-    @MockitoBean S3ImageService s3ImageService;
+
+    @DynamicPropertySource
+    static void registerDatasourceProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
+        registry.add("spring.datasource.username", MYSQL::getUsername);
+        registry.add("spring.datasource.password", MYSQL::getPassword);
+    }
 
     @Test
     void keywordPaginationKeepsOrderCountAndFetchJoins() {
