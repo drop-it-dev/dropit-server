@@ -26,6 +26,15 @@ public interface DropRepository extends JpaRepository<Drop, Long>, DropRepositor
             """)
     Optional<Drop> findDetailById(@Param("dropId") Long dropId);
 
+    @Transactional(readOnly = true)
+    @Query("""
+            select d.remainingQuantity as remainingQuantity,
+                   d.visible as visible
+            from Drop d
+            where d.id = :dropId
+            """)
+    Optional<DropLiveState> findLiveStateById(@Param("dropId") Long dropId);
+
     boolean existsByProductId(Long productId);
 
     Page<Drop> findAllByVisibleTrue(Pageable pageable);
