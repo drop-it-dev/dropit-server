@@ -22,13 +22,25 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
 
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity(jsr250Enabled = true)
 public class SecurityConfig {
+
+    public static final RequestMatcher PUBLIC_ENDPOINTS = new OrRequestMatcher(
+            PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/actuator/health"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/signup"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/login"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/reissue"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/drops"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/drops/{dropId}")
+    );
 
     private final JwtFilter jwtFilter;
     private final SecurityErrorResponseSender errorResponseSender;
@@ -94,8 +106,7 @@ public class SecurityConfig {
                                 errorResponseSender.send(response, JwtErrorCode.JWT_ACCESS_DENIED))
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/login", "/auth/reissue").permitAll()
+                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .anyRequest().authenticated()
                 )
                 // JWT 인증이 익명 인증보다 먼저 처리되도록 순서 지정

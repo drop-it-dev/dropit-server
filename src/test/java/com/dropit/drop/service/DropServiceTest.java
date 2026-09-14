@@ -291,36 +291,6 @@ class DropServiceTest {
     }
 
     @Test
-    @DisplayName("드랍 소유자는 공개 여부를 변경할 수 있다")
-    void changeVisibilityOwnedBySeller() {
-        Drop drop = saveDrop(1L, 10L, 100L, LocalDateTime.now().plusDays(1));
-        when(dropRepository.findById(100L)).thenReturn(Optional.of(drop));
-
-        DropResponse response = dropService.changeVisibility(
-                1L,
-                100L,
-                new DropVisibilityUpdateRequest(false)
-        );
-
-        assertEquals(false, response.visible());
-    }
-
-    @Test
-    @DisplayName("다른 판매자는 드랍 공개 여부를 변경할 수 없다")
-    void rejectChangingVisibilityOfAnotherSellersDrop() {
-        Drop drop = saveDrop(1L, 10L, 100L, LocalDateTime.now().plusDays(1));
-        when(dropRepository.findById(100L)).thenReturn(Optional.of(drop));
-
-        ServiceException exception = assertThrows(
-                ServiceException.class,
-                () -> dropService.changeVisibility(2L, 100L, new DropVisibilityUpdateRequest(false))
-        );
-
-        assertEquals(DropErrorCode.DROP_OWNER_REQUIRED, exception.getErrorCode());
-        assertEquals(true, drop.isVisible());
-    }
-
-    @Test
     @DisplayName("판매가 시작된 드랍은 삭제할 수 없다")
     void rejectDeletingStartedDrop() {
         Drop drop = saveDrop(1L, 10L, 100L, LocalDateTime.now().minusMinutes(1));

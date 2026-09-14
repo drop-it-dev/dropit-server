@@ -215,7 +215,7 @@ public class ProductService {
     }
 
     private ProductResponse toResponse(Product product) {
-        String imageUrl = s3ImageService.createDownloadUrl(
+        String imageUrl = s3ImageService.createPublicUrl(
                 product.getImageUrl()
         );
 

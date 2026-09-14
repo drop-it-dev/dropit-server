@@ -21,12 +21,19 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+import static com.dropit.global.security.SecurityConfig.PUBLIC_ENDPOINTS;
+
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final SecurityErrorResponseSender errorResponseSender;
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return PUBLIC_ENDPOINTS.matches(request);
+    }
 
     @Override
     protected void doFilterInternal(
@@ -86,4 +93,3 @@ public class JwtFilter extends OncePerRequestFilter {
         }
     }
 }
-

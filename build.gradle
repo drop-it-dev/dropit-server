@@ -35,6 +35,8 @@ dependencies {
     implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:4.1.0')
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
+    implementation 'software.amazon.awssdk:url-connection-client'
 
     implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
@@ -171,4 +173,43 @@ tasks.register('dbDown', Exec) {
     group = 'development'
     description = '로컬 DB 컨테이너를 종료합니다.'
     commandLine 'docker', 'compose', '--env-file', '.env.local', 'down'
+}
+
+def performanceComposeFile = file('performance/compose.performance.yml')
+def performanceRawResultDirectory = file('performance/results/raw')
+
+tasks.register('performanceUp', Exec) {
+    group = 'verification'
+    description = '성능 관측용 InfluxDB와 Grafana를 실행합니다.'
+    commandLine 'docker', 'compose', '--file', performanceComposeFile,
+            'up', '--detach', '--wait', 'influxdb', 'grafana'
+}
+
+tasks.register('performanceSmoke', Exec) {
+    group = 'verification'
+    description = 'k6가 성능 관측 스택에 지표와 JSON 결과를 기록하는지 확인합니다.'
+    dependsOn(tasks.named('performanceUp'))
+
+    doFirst {
+        performanceRawResultDirectory.mkdirs()
+    }
+
+    environment 'BASE_URL', 'http://influxdb:8086'
+    environment 'TEST_RUN', 'performance-stack-smoke'
+    environment 'K6_SCRIPT', 'performance-stack-smoke.js'
+    commandLine 'docker', 'compose', '--file', performanceComposeFile,
+            '--profile', 'load', 'run', '--rm', 'k6'
+
+    doLast {
+        File summary = new File(performanceRawResultDirectory, 'performance-stack-smoke.json')
+        if (!summary.isFile() || summary.length() == 0) {
+            throw new GradleException("k6 smoke 결과가 생성되지 않았습니다: ${summary}")
+        }
+    }
+}
+
+tasks.register('performanceDown', Exec) {
+    group = 'verification'
+    description = '성능 관측용 컨테이너와 네트워크를 종료합니다.'
+    commandLine 'docker', 'compose', '--file', performanceComposeFile, 'down'
 }

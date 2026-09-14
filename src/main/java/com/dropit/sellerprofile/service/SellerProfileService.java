@@ -171,12 +171,12 @@ public class SellerProfileService {
 
     /*
      * The entity stores the private S3 object key.
-     * The response receives a temporary presigned URL.
+     * The response receives a public S3 object URL.
      */
     private SellerProfileResponse toResponse(
             SellerProfile sellerProfile
     ) {
-        String imageUrl = s3ImageService.createDownloadUrl(
+        String imageUrl = s3ImageService.createPublicUrl(
                 sellerProfile.getImageUrl()
         );
 

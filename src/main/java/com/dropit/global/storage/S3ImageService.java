@@ -2,6 +2,7 @@ package com.dropit.global.storage;
 
 import com.dropit.global.exception.ServiceException;
 import io.awspring.cloud.s3.ObjectMetadata;
+import io.awspring.cloud.s3.S3Resource;
 import io.awspring.cloud.s3.S3Template;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +77,21 @@ public class S3ImageService {
                     URL_EXPIRATION
             ).toString();
         } catch (SdkException exception) {
+            throw new ServiceException(
+                    StorageErrorCode.FILE_URL_CREATION_FAILED
+            );
+        }
+    }
+
+    public String createPublicUrl(String key) {
+        if (key == null) {
+            return null;
+        }
+
+        try {
+            S3Resource resource = s3Template.createResource(bucket, key);
+            return resource.getURL().toString();
+        } catch (IOException | SdkException exception) {
             throw new ServiceException(
                     StorageErrorCode.FILE_URL_CREATION_FAILED
             );

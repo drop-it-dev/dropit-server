@@ -2,6 +2,7 @@ package com.dropit.global.storage;
 
 import com.dropit.global.exception.ServiceException;
 import io.awspring.cloud.s3.ObjectMetadata;
+import io.awspring.cloud.s3.S3Resource;
 import io.awspring.cloud.s3.S3Template;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -105,6 +106,22 @@ class S3ImageServiceTest {
                 key,
                 Duration.ofMinutes(10)
         );
+    }
+
+    @Test
+    @DisplayName("이미지 키를 공개 S3 URL로 변환한다")
+    void createPublicUrl() throws Exception {
+        String key = "products/100/image.png";
+        URL publicUrl = new URL(
+                "https://dropit-test.s3.ap-northeast-2.amazonaws.com/products/100/image.png"
+        );
+        S3Resource resource = org.mockito.Mockito.mock(S3Resource.class);
+        when(s3Template.createResource(BUCKET, key)).thenReturn(resource);
+        when(resource.getURL()).thenReturn(publicUrl);
+
+        assertEquals(publicUrl.toString(), s3ImageService.createPublicUrl(key));
+        assertNull(s3ImageService.createPublicUrl(null));
+        verify(s3Template).createResource(BUCKET, key);
     }
 
     private void assertErrorCode(

@@ -106,6 +106,18 @@ class SecurityConfigTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void publicDropListDoesNotRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/drops"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void publicDropDetailDoesNotRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/drops/100"))
+                .andExpect(status().isOk());
+    }
+
     @Configuration(proxyBeanMethods = false)
     @EnableWebSecurity
     @EnableWebMvc
@@ -126,6 +138,11 @@ class SecurityConfigTest {
         DocumentationTestController documentationTestController() {
             return new DocumentationTestController();
         }
+
+        @Bean
+        PublicDropTestController publicDropTestController() {
+            return new PublicDropTestController();
+        }
     }
 
     @RestController
@@ -133,6 +150,20 @@ class SecurityConfigTest {
 
         @GetMapping("/openapi/test")
         void getDocumentation(HttpServletResponse response) throws Exception {
+            response.setStatus(HttpServletResponse.SC_OK);
+        }
+    }
+
+    @RestController
+    static class PublicDropTestController {
+
+        @GetMapping("/drops")
+        void getDrops(HttpServletResponse response) throws Exception {
+            response.setStatus(HttpServletResponse.SC_OK);
+        }
+
+        @GetMapping("/drops/{dropId}")
+        void getDrop(HttpServletResponse response) throws Exception {
             response.setStatus(HttpServletResponse.SC_OK);
         }
     }
