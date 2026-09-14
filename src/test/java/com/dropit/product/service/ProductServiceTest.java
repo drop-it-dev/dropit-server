@@ -134,8 +134,13 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(product, "id", productId);
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(s3ImageService.createPublicUrl("products/limited-hoodie.webp"))
-                .thenReturn("https://public.example.com/limited-hoodie.webp");
+        when(
+                s3ImageService.createPublicUrl(
+                        "products/limited-hoodie.webp"
+                )
+        ).thenReturn(
+                "https://d3czchk38dd04k.cloudfront.net/products/limited-hoodie.webp"
+        );
 
         ProductResponse response = productService.getProduct(productId);
 
@@ -145,7 +150,7 @@ class ProductServiceTest {
         assertEquals("Limited Hoodie", response.getName());
         assertEquals("Limited edition hoodie", response.getDescription());
         assertEquals(
-                "https://public.example.com/limited-hoodie.webp",
+                "https://d3czchk38dd04k.cloudfront.net/products/limited-hoodie.webp",
                 response.getImageUrl()
         );
     }
