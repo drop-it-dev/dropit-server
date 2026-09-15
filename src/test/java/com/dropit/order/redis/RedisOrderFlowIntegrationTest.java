@@ -58,6 +58,8 @@ class RedisOrderFlowIntegrationTest {
         RedisOrderAdmissionAdapter admission = new RedisOrderAdmissionAdapter(redisTemplate);
 
         assertEquals(OrderAdmissionResultType.NEW, admission.reserve(request).type());
+        assertEquals(com.dropit.order.entity.OrderRequestStatus.PENDING,
+                admission.getSnapshot(dropId, userId, "hash").status());
         assertEquals(OrderAdmissionResultType.REPLAY, admission.reserve(request).type());
         assertEquals("1", redisTemplate.opsForValue().get(RedisOrderKeyFactory.stockKey(dropId)));
         assertEquals("1", redisTemplate.opsForHash().get(RedisOrderKeyFactory.purchaseKey(dropId), "201"));

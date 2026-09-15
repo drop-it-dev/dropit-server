@@ -101,7 +101,7 @@ public class RedisOrderAdmissionAdapter {
                 new java.math.BigDecimal(required(values, "unitPrice")),
                 Integer.parseInt(required(values, "discountRate")),
                 required(values, "publicationState"),
-                com.dropit.order.entity.OrderRequestStatus.valueOf(required(values, "status")),
+                parseStatus(required(values, "status")),
                 optionalLong(values, "orderId"),
                 optional(values, "failureCode"),
                 Long.parseLong(required(values, "expiresAtEpochMillis"))
@@ -155,6 +155,13 @@ public class RedisOrderAdmissionAdapter {
     private static Long optionalLong(Map<Object, Object> values, String field) {
         String value = optional(values, field);
         return value == null || value.isBlank() ? null : Long.valueOf(value);
+    }
+
+    private static com.dropit.order.entity.OrderRequestStatus parseStatus(String status) {
+        if ("RESERVED".equals(status)) {
+            return com.dropit.order.entity.OrderRequestStatus.PENDING;
+        }
+        return com.dropit.order.entity.OrderRequestStatus.valueOf(status);
     }
 
     private static OrderAdmissionResult parseResult(String result) {
