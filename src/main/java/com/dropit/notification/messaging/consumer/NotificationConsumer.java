@@ -12,7 +12,7 @@ public class NotificationConsumer {
 
     private final NotificationService notificationService;
 
-    @SqsListener("${aws.sqs.notification-queue-name}")
+    @SqsListener("${aws.sqs.notification-queue-url}")
     public void receive(NotificationEvent event) {
         notificationService.create(
                 event.userId(),

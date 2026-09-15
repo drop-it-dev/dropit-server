@@ -12,10 +12,10 @@ public class NotificationProducer {
 
     private final SqsTemplate sqsTemplate;
 
-    @Value("${aws.sqs.notification-queue-name}")
-    private String queueName;
+    @Value("${aws.sqs.notification-queue-url}")
+    private String queueUrl;
 
     public void send(NotificationEvent event) {
-        sqsTemplate.send(queueName, event);
+        sqsTemplate.send(queueUrl, event);
     }
 }
