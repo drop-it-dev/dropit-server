@@ -1,5 +1,6 @@
 package com.dropit.drop.dto.response;
 
+import com.dropit.drop.cache.DropDetailCacheValue;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.entity.DropStatus;
 
@@ -56,6 +57,37 @@ public record DropResponse(
                 drop.getCloseAt(),
 
                 drop.currentStatus(LocalDateTime.now())
+        );
+    }
+
+    public static DropResponse from(
+            DropDetailCacheValue detail,
+            int remainingQuantity,
+            boolean visible,
+            LocalDateTime now
+    ) {
+        return new DropResponse(
+                detail.id(),
+                detail.sellerId(),
+                detail.sellerName(),
+                detail.productId(),
+                detail.productName(),
+                detail.imageUrl(),
+                detail.price(),
+                detail.discountRate(),
+                detail.initialQuantity(),
+                remainingQuantity,
+                detail.initialQuantity() - remainingQuantity,
+                detail.purchaseLimit(),
+                visible,
+                detail.openAt(),
+                detail.closeAt(),
+                DropStatus.resolve(
+                        detail.openAt(),
+                        detail.closeAt(),
+                        remainingQuantity,
+                        now
+                )
         );
     }
 }

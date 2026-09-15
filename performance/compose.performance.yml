@@ -1,0 +1,59 @@
+name: dropit-performance
+
+services:
+  influxdb:
+    image: influxdb:1.8.10
+    environment:
+      INFLUXDB_DB: k6
+    ports:
+      - "127.0.0.1:8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8086/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  grafana:
+    image: grafana/grafana:12.4.10
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_DEFAULT_THEME: light
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  k6:
+    image: grafana/k6:1.7.1
+    profiles: ["load"]
+    environment:
+      K6_OUT: influxdb=http://influxdb:8086/k6
+      BASE_URL: ${BASE_URL:-http://host.docker.internal:8080}
+      TEST_RUN: ${TEST_RUN:-order-flow-smoke}
+      AUTH_TOKEN: ${AUTH_TOKEN:-}
+    volumes:
+      - ./k6:/scripts:ro
+      - ./results/raw:/results
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    entrypoint: ["k6"]
+    command: ["run", "/scripts/${K6_SCRIPT:-drop-list-index.js}"]
+    restart: "no"
+
+volumes:
+  influxdb-data:
+  grafana-data:

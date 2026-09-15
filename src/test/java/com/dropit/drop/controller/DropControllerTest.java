@@ -4,6 +4,7 @@ import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.entity.DropStatus;
 import com.dropit.drop.service.DropService;
+import com.dropit.drop.service.DropVisibilityService;
 import com.dropit.global.exception.GlobalExceptionHandler;
 import com.dropit.global.security.authentication.JwtAuthenticationToken;
 import com.dropit.global.security.principal.AuthUser;
@@ -42,6 +43,9 @@ class DropControllerTest {
     @Mock
     private DropService dropService;
 
+    @Mock
+    private DropVisibilityService dropVisibilityService;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -50,7 +54,7 @@ class DropControllerTest {
         validator.afterPropertiesSet();
 
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new DropController(dropService))
+                .standaloneSetup(new DropController(dropService, dropVisibilityService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(
                         new PageableHandlerMethodArgumentResolver(),
@@ -201,7 +205,7 @@ class DropControllerTest {
     @Test
     @DisplayName("드랍 공개 여부 변경 요청 시 200 상태를 반환한다")
     void changeVisibility() throws Exception {
-        when(dropService.changeVisibility(eq(1L), eq(100L), any())).thenReturn(response());
+        when(dropVisibilityService.changeVisibility(eq(1L), eq(100L), any())).thenReturn(response());
 
         mockMvc.perform(patch("/drops/100/visibility")
                         .contentType(MediaType.APPLICATION_JSON)

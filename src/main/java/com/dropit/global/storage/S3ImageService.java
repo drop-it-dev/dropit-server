@@ -2,6 +2,7 @@ package com.dropit.global.storage;
 
 import com.dropit.global.exception.ServiceException;
 import io.awspring.cloud.s3.ObjectMetadata;
+import io.awspring.cloud.s3.S3Resource;
 import io.awspring.cloud.s3.S3Template;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,8 @@ public class S3ImageService {
 
     private static final Duration URL_EXPIRATION = Duration.ofMinutes(10);
 
+    private static final String IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
     private static final Map<String, String> ALLOWED_IMAGE_TYPES = Map.of(
             "image/jpeg", ".jpg",
             "image/png", ".png",
@@ -32,6 +35,9 @@ public class S3ImageService {
 
     @Value("${spring.cloud.aws.s3.bucket}")
     private String bucket;
+
+    @Value("${app.cdn.domain}")
+    private String cdnDomain;
 
     public String upload(MultipartFile file, String directory) {
         validate(file);
@@ -47,6 +53,7 @@ public class S3ImageService {
         try {
             ObjectMetadata metadata = ObjectMetadata.builder()
                     .contentType(contentType)
+                    .cacheControl(IMAGE_CACHE_CONTROL)
                     .build();
 
             s3Template.upload(
@@ -80,6 +87,13 @@ public class S3ImageService {
                     StorageErrorCode.FILE_URL_CREATION_FAILED
             );
         }
+    }
+
+    public String createPublicUrl(String key) {
+        if (key == null) {
+            return null;
+        }
+        return "https://" + cdnDomain + "/" + key;
     }
 
     public void deleteQuietly(String key) {

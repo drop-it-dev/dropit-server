@@ -53,6 +53,13 @@ public class SellerProfileController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/me/image")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<Void> deleteImage(@CurrentUserId Long userId) {
+        sellerProfileService.deleteImage(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{sellerProfileId}")
     public ResponseEntity<SellerProfileResponse> getById(
             @PathVariable Long sellerProfileId

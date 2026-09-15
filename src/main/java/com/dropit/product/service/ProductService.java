@@ -1,5 +1,6 @@
 package com.dropit.product.service;
 
+import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.global.storage.S3ImageService;
 import com.dropit.product.dto.request.ProductCreateRequest;
@@ -26,6 +27,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final DropRepository dropRepository;
     private final S3ImageService s3ImageService;
 
     @Transactional
@@ -142,11 +144,27 @@ public class ProductService {
 
     @Transactional
     public void delete(Long sellerId, Long productId) {
-        Product product = findOwnedProduct(sellerId, productId);
+        Product product = findOwnedProductForUpdate(sellerId, productId);
+
+        if (dropRepository.existsByProductId(productId)) {
+            throw new ServiceException(
+                    ProductErrorCode.PRODUCT_IN_USE_BY_DROP
+            );
+        }
+
         String imageKey = product.getImageUrl();
 
         productRepository.delete(product);
 
+        deleteImageAfterCommit(imageKey);
+    }
+
+    @Transactional
+    public void deleteImage(Long sellerId, Long productId) {
+        Product product = findOwnedProduct(sellerId, productId);
+
+        String imageKey = product.getImageUrl();
+        product.changeImage(null);
         deleteImageAfterCommit(imageKey);
     }
 
@@ -161,23 +179,43 @@ public class ProductService {
                         )
                 );
 
+        validateOwner(sellerId, product);
+
+        return product;
+    }
+
+    private Product findOwnedProductForUpdate(
+            Long sellerId,
+            Long productId
+    ) {
+        Product product = productRepository.findByIdForUpdate(productId)
+                .orElseThrow(() ->
+                        new ServiceException(
+                                ProductErrorCode.PRODUCT_NOT_FOUND
+                        )
+                );
+
+        validateOwner(sellerId, product);
+
+        return product;
+    }
+
+    private void validateOwner(Long sellerId, Product product) {
         if (!product.getSeller().getId().equals(sellerId)) {
             throw new ServiceException(
                     ProductErrorCode.PRODUCT_OWNER_REQUIRED
             );
         }
-
+      
         if (product.getSeller().getRole() != UserRole.SELLER) {
             throw new ServiceException(
                     ProductErrorCode.SELLER_ROLE_REQUIRED
             );
         }
-
-        return product;
     }
 
     private ProductResponse toResponse(Product product) {
-        String imageUrl = s3ImageService.createDownloadUrl(
+        String imageUrl = s3ImageService.createPublicUrl(
                 product.getImageUrl()
         );
 

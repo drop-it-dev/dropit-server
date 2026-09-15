@@ -41,11 +41,15 @@ public class AuthService {
             );
         }
 
+        UserRole role = request.role() == null
+                ? UserRole.USER
+                : request.role().toUserRole();
+
         User user = new User(
                 request.email(),
                 passwordEncoder.encode(request.password()),
                 request.username(),
-                UserRole.USER
+                role
         );
 
         userRepository.save(user);

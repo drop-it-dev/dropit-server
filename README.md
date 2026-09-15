@@ -102,9 +102,23 @@ src/main/java/com/dropit
 
 ## API 문서
 
-<!-- 예시: [Postman API Documentation](https://documenter.getpostman.com/view/...) -->
+Spring REST Docs를 사용하고, 테스트 스니펫을 OpenAPI 3.0.1 명세로 변환합니다.
+Swagger UI는 이 명세 파일을 읽어 화면에 보여주는 역할만 하므로, 별도의 어노테이션 기반 API 명세가 생기지 않습니다.
 
-_링크 추가 예정_
+`bootRun`과 `bootJar`는 테스트와 OpenAPI 생성 작업을 먼저 실행한 뒤 생성된 YAML을 애플리케이션 정적 리소스에 포함합니다.
+명세와 Swagger UI 리소스를 단독으로 준비하려면 `./gradlew openApiDocs`를 실행합니다.
+명세만 생성하려면 `./gradlew openapi3`를 실행하며, 결과는 `build/api-spec/openapi3.yaml`에 저장됩니다. (생성물은 빌드 디렉터리에만 남으며 저장소에는 커밋하지 않습니다.)
+
+브라우저에서 http://localhost:8080/swagger-ui/index.html를 열면 API 문서를 확인할 수 있습니다.
+원본 명세는 http://localhost:8080/openapi/openapi3.yaml 경로에서도 직접 확인할 수 있습니다.
+
+Swagger UI와 OpenAPI YAML은 HTTP Basic Auth로 보호됩니다.
+로컬에서는 `.env.local`에 다음 두 값을 설정합니다.
+
+```properties
+DOCS_AUTH_USERNAME=<local username>
+DOCS_AUTH_PASSWORD=<local password>
+```
 
 인증이 필요한 API는 다음 헤더를 전달합니다.
 

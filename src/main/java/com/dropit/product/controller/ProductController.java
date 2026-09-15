@@ -100,5 +100,13 @@ public class ProductController {
         return ResponseEntity.ok(response);
     }
 
-
+    @DeleteMapping("/products/{productId}/image")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<Void> deleteImage(
+            @CurrentUserId Long sellerId,
+            @PathVariable Long productId
+    ) {
+        productService.deleteImage(sellerId, productId);
+        return ResponseEntity.noContent().build();
+    }
 }

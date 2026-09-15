@@ -6,7 +6,9 @@ import com.dropit.drop.dto.request.DropUpdateRequest;
 import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.service.DropService;
+import com.dropit.drop.service.DropVisibilityService;
 import com.dropit.global.security.principal.CurrentUserId;
+import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,6 +25,7 @@ import java.net.URI;
 public class DropController {
 
     private final DropService dropService;
+    private final DropVisibilityService dropVisibilityService;
 
     @PostMapping("/drops")
     public ResponseEntity<Long> create(
@@ -36,6 +39,7 @@ public class DropController {
                 .body(dropId);
     }
 
+    @PermitAll
     @GetMapping("/drops")
     public ResponseEntity<Page<DropResponse>> getAll(
             @ModelAttribute DropSearchCondition condition,
@@ -46,6 +50,7 @@ public class DropController {
         return ResponseEntity.ok(response);
     }
 
+    @PermitAll
     @GetMapping("/drops/{dropId}")
     public ResponseEntity<DropResponse> getOne(
             @PathVariable Long dropId
@@ -102,7 +107,7 @@ public class DropController {
             @PathVariable Long dropId,
             @Valid @RequestBody DropVisibilityUpdateRequest request
     ) {
-        return ResponseEntity.ok(dropService.changeVisibility(sellerId, dropId, request));
+        return ResponseEntity.ok(dropVisibilityService.changeVisibility(sellerId, dropId, request));
     }
 
     @DeleteMapping("/drops/{dropId}")

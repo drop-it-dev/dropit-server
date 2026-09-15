@@ -2,6 +2,7 @@ package com.dropit.global.storage;
 
 import com.dropit.global.exception.ServiceException;
 import io.awspring.cloud.s3.ObjectMetadata;
+import io.awspring.cloud.s3.S3Resource;
 import io.awspring.cloud.s3.S3Template;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -63,6 +64,10 @@ class S3ImageServiceTest {
         );
         assertEquals(keyCaptor.getValue(), key);
         assertEquals("image/png", metadataCaptor.getValue().getContentType());
+        assertEquals(
+                "public, max-age=31536000, immutable",
+                metadataCaptor.getValue().getCacheControl()
+        );
         assertTrue(key.matches("products/100/[\\w-]+\\.png"));
     }
 
@@ -104,6 +109,28 @@ class S3ImageServiceTest {
                 BUCKET,
                 key,
                 Duration.ofMinutes(10)
+        );
+    }
+
+    @Test
+    @DisplayName("이미지 키를 CloudFront CDN URL로 변환한다")
+    void createPublicUrl() throws Exception {
+        ReflectionTestUtils.setField(
+                s3ImageService,
+                "cdnDomain",
+                "d3czchk38dd04k.cloudfront.net"
+        );
+
+        String key =
+                "products/100/image.png";
+
+        assertEquals(
+                "https://d3czchk38dd04k.cloudfront.net/products/100/image.png",
+                s3ImageService.createPublicUrl(key)
+        );
+
+        assertNull(
+                s3ImageService.createPublicUrl(null)
         );
     }
 

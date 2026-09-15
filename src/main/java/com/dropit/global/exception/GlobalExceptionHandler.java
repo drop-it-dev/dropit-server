@@ -1,5 +1,9 @@
 package com.dropit.global.exception;
 
+import com.dropit.order.dto.response.OrderPublicationErrorResponse;
+import com.dropit.order.exception.OrderErrorCode;
+import com.dropit.order.service.OrderPublicationUnconfirmedException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,6 +15,19 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(OrderPublicationUnconfirmedException.class)
+    public ResponseEntity<OrderPublicationErrorResponse> handleOrderPublicationUnconfirmed(
+            OrderPublicationUnconfirmedException exception
+    ) {
+        OrderErrorCode errorCode = OrderErrorCode.ORDER_PUBLICATION_UNCONFIRMED;
+        return ResponseEntity
+                .status(errorCode.status())
+                .header(HttpHeaders.LOCATION, "/order-requests/" + exception.getRequestId())
+                .body(new OrderPublicationErrorResponse(
+                        errorCode.code(), errorCode.message(), exception.getRequestId()
+                ));
+    }
 
     @ExceptionHandler(ServiceException.class)
     public ResponseEntity<ErrorResponse> handleServiceException(ServiceException e) {

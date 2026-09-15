@@ -1,5 +1,6 @@
 package com.dropit.product.service;
 
+import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.global.storage.S3ImageService;
 import com.dropit.product.dto.request.ProductCreateRequest;
@@ -46,6 +47,9 @@ class ProductServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private DropRepository dropRepository;
+  
     @Mock
     private S3ImageService s3ImageService;
 
@@ -130,8 +134,13 @@ class ProductServiceTest {
         ReflectionTestUtils.setField(product, "id", productId);
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(s3ImageService.createDownloadUrl("products/limited-hoodie.webp"))
-                .thenReturn("https://signed.example.com/limited-hoodie.webp");
+        when(
+                s3ImageService.createPublicUrl(
+                        "products/limited-hoodie.webp"
+                )
+        ).thenReturn(
+                "https://d3czchk38dd04k.cloudfront.net/products/limited-hoodie.webp"
+        );
 
         ProductResponse response = productService.getProduct(productId);
 
@@ -141,7 +150,7 @@ class ProductServiceTest {
         assertEquals("Limited Hoodie", response.getName());
         assertEquals("Limited edition hoodie", response.getDescription());
         assertEquals(
-                "https://signed.example.com/limited-hoodie.webp",
+                "https://d3czchk38dd04k.cloudfront.net/products/limited-hoodie.webp",
                 response.getImageUrl()
         );
     }
@@ -318,8 +327,8 @@ class ProductServiceTest {
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(s3ImageService.upload(file, "products/100"))
                 .thenReturn("products/100/new.png");
-        when(s3ImageService.createDownloadUrl("products/100/new.png"))
-                .thenReturn("https://signed.example.com/new.png");
+        when(s3ImageService.createPublicUrl("products/100/new.png"))
+                .thenReturn("https://public.example.com/new.png");
 
         ProductResponse response = productService.uploadImage(
                 sellerId,
@@ -328,7 +337,7 @@ class ProductServiceTest {
         );
 
         assertEquals("products/100/new.png", product.getImageUrl());
-        assertEquals("https://signed.example.com/new.png", response.getImageUrl());
+        assertEquals("https://public.example.com/new.png", response.getImageUrl());
         verify(s3ImageService).upload(file, "products/100");
     }
 
@@ -367,18 +376,42 @@ class ProductServiceTest {
                 null
         );
         ReflectionTestUtils.setField(product, "id", productId);
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdForUpdate(productId)).thenReturn(Optional.of(product));
+        when(dropRepository.existsByProductId(productId)).thenReturn(false);
 
         productService.delete(sellerId, productId);
 
+        verify(dropRepository).existsByProductId(productId);
         verify(productRepository).delete(product);
+    }
+
+    @Test
+    @DisplayName("Drop에서 사용 중인 상품은 삭제할 수 없다")
+    void rejectDeletingProductUsedByDrop() {
+        Long sellerId = 1L;
+        Long productId = 100L;
+        User seller = createUser(UserRole.SELLER);
+        ReflectionTestUtils.setField(seller, "id", sellerId);
+
+        Product product = new Product(seller, "Product", null, null);
+        ReflectionTestUtils.setField(product, "id", productId);
+        when(productRepository.findByIdForUpdate(productId)).thenReturn(Optional.of(product));
+        when(dropRepository.existsByProductId(productId)).thenReturn(true);
+
+        assertServiceException(
+                ProductErrorCode.PRODUCT_IN_USE_BY_DROP,
+                () -> productService.delete(sellerId, productId)
+        );
+
+        verify(dropRepository).existsByProductId(productId);
+        verify(productRepository, never()).delete(any(Product.class));
     }
 
     @Test
     @DisplayName("존재하지 않는 상품은 삭제할 수 없다")
     void rejectDeletingMissingProduct() {
         Long productId = 999L;
-        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+        when(productRepository.findByIdForUpdate(productId)).thenReturn(Optional.empty());
 
         assertServiceException(
                 ProductErrorCode.PRODUCT_NOT_FOUND,
@@ -404,13 +437,14 @@ class ProductServiceTest {
                 null
         );
         ReflectionTestUtils.setField(product, "id", productId);
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productRepository.findByIdForUpdate(productId)).thenReturn(Optional.of(product));
 
         assertServiceException(
                 ProductErrorCode.PRODUCT_OWNER_REQUIRED,
                 () -> productService.delete(otherSellerId, productId)
         );
 
+        verify(dropRepository, never()).existsByProductId(productId);
         verify(productRepository, never()).delete(any(Product.class));
     }
 
