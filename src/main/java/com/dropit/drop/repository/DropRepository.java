@@ -65,6 +65,7 @@ public interface DropRepository extends JpaRepository<Drop, Long>, DropRepositor
     int decreaseStockIfAvailable(
             @Param("dropId") Long dropId,
             @Param("quantity") int quantity
+    );
 
     List<Drop> findAllByVisibleTrueAndOpenAtBetween(
             LocalDateTime from,
