@@ -161,6 +161,9 @@ public class RedisOrderAdmissionAdapter {
         if ("RESERVED".equals(status)) {
             return com.dropit.order.entity.OrderRequestStatus.PENDING;
         }
+        if ("CANCELED".equals(status)) {
+            return com.dropit.order.entity.OrderRequestStatus.SUCCEEDED;
+        }
         return com.dropit.order.entity.OrderRequestStatus.valueOf(status);
     }
 

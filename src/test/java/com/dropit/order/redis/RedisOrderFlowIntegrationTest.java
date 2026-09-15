@@ -75,6 +75,37 @@ class RedisOrderFlowIntegrationTest {
     }
 
     @Test
+    @DisplayName("취소된 주문의 Redis 상태는 유지하고 주문 요청은 성공 완료로 조회한다")
+    void readCanceledOrderAsCompletedRequest() {
+        long dropId = 102L;
+        long userId = 202L;
+        long closeAt = Instant.now().plusSeconds(3600).toEpochMilli();
+        redisTemplate.opsForHash().putAll(RedisOrderKeyFactory.saleKey(dropId), Map.of(
+                "purchaseLimit", "3", "openAt", "0", "closeAt", Long.toString(closeAt),
+                "productName", "product", "unitPrice", "1000", "discountRate", "0"));
+        redisTemplate.opsForValue().set(RedisOrderKeyFactory.stockKey(dropId), "1");
+
+        UUID requestId = UUID.randomUUID();
+        OrderAdmissionRequest request = new OrderAdmissionRequest(
+                requestId, userId, dropId, "canceled-hash", "102:1", 1,
+                Instant.now().toEpochMilli() * 1_000L);
+        RedisOrderAdmissionAdapter admission = new RedisOrderAdmissionAdapter(redisTemplate);
+        assertEquals(OrderAdmissionResultType.NEW, admission.reserve(request).type());
+
+        RedisOrderFinalizationSyncAdapter finalization = new RedisOrderFinalizationSyncAdapter(redisTemplate);
+        OrderRequestSyncCommand command = new OrderRequestSyncCommand(
+                requestId, RedisOrderRequestState.CANCELED, 301L, userId, dropId,
+                "canceled-hash", 1, null, 1L, Instant.ofEpochMilli(closeAt + 86_400_000L));
+        assertEquals(OrderRequestSyncResult.APPLIED, finalization.sync(command));
+
+        String reservationKey = RedisOrderKeyFactory.idempotencyKey(dropId, userId, "canceled-hash");
+        assertEquals("CANCELED", redisTemplate.opsForHash().get(reservationKey, "status"));
+        ReservedOrderSnapshot snapshot = admission.getSnapshot(dropId, userId, "canceled-hash");
+        assertEquals(com.dropit.order.entity.OrderRequestStatus.SUCCEEDED, snapshot.status());
+        assertTrue(snapshot.terminal());
+    }
+
+    @Test
     @DisplayName("requestId index는 생성과 동시에 절대 만료 시각을 가진다")
     void indexHasExpiration() {
         RedisOrderAdmissionAdapter admission = new RedisOrderAdmissionAdapter(redisTemplate);
