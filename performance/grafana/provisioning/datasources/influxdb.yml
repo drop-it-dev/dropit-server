@@ -12,3 +12,13 @@ datasources:
     jsonData:
       httpMode: GET
       timeInterval: 1s
+
+  - name: Application Prometheus
+    uid: application-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    editable: false
+    jsonData:
+      timeInterval: 2s

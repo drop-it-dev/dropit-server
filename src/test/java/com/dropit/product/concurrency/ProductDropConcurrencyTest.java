@@ -1,5 +1,11 @@
 package com.dropit.product.concurrency;
 
+import com.dropit.drop.cache.DropListCacheLoader;
+import com.dropit.drop.cache.DropListCacheMetrics;
+import com.dropit.drop.cache.DropListLocalFallback;
+import com.dropit.drop.cache.DropListLocalReadCache;
+import com.dropit.drop.cache.DropListCacheReader;
+import com.dropit.drop.cache.DropListStockReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.repository.DropRepository;
 import com.dropit.drop.service.DropService;
@@ -49,6 +55,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import({ProductService.class, DropService.class, QuerydslConfig.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class ProductDropConcurrencyTest {
+
+    @MockitoBean
+    private DropListCacheReader dropListCacheReader;
+
+    @MockitoBean
+    private DropListCacheLoader dropListCacheLoader;
+
+    @MockitoBean
+    private DropListStockReader dropListStockReader;
+
+    @MockitoBean
+    private DropListCacheMetrics dropListCacheMetrics;
+
+    @MockitoBean
+    private DropListLocalFallback dropListLocalFallback;
+
+    @MockitoBean
+    private DropListLocalReadCache dropListLocalReadCache;
 
     private static final int REPEAT_COUNT = 100;
     private static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4");
