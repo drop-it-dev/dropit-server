@@ -178,13 +178,21 @@ class SellerProfileServiceTest {
                 .thenReturn(Optional.of(profile));
         when(s3ImageService.upload(file, "seller-profiles/1"))
                 .thenReturn("seller-profiles/1/new.png");
-        when(s3ImageService.createPublicUrl("seller-profiles/1/new.png"))
-                .thenReturn("https://public.example.com/new.png");
+        when(
+                s3ImageService.createPublicUrl(
+                        "seller-profiles/1/new.png"
+                )
+        ).thenReturn(
+                "https://d3czchk38dd04k.cloudfront.net/seller-profiles/1/new.png"
+        );
 
         SellerProfileResponse response = sellerProfileService.uploadImage(userId, file);
 
         assertEquals("seller-profiles/1/new.png", profile.getImageUrl());
-        assertEquals("https://public.example.com/new.png", response.imageUrl());
+        assertEquals(
+                "https://d3czchk38dd04k.cloudfront.net/seller-profiles/1/new.png",
+                response.imageUrl()
+        );
         verify(s3ImageService).upload(file, "seller-profiles/1");
     }
 

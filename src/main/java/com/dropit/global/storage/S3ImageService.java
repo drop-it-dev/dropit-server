@@ -23,6 +23,8 @@ public class S3ImageService {
 
     private static final Duration URL_EXPIRATION = Duration.ofMinutes(10);
 
+    private static final String IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
     private static final Map<String, String> ALLOWED_IMAGE_TYPES = Map.of(
             "image/jpeg", ".jpg",
             "image/png", ".png",
@@ -33,6 +35,9 @@ public class S3ImageService {
 
     @Value("${spring.cloud.aws.s3.bucket}")
     private String bucket;
+
+    @Value("${app.cdn.domain}")
+    private String cdnDomain;
 
     public String upload(MultipartFile file, String directory) {
         validate(file);
@@ -48,6 +53,7 @@ public class S3ImageService {
         try {
             ObjectMetadata metadata = ObjectMetadata.builder()
                     .contentType(contentType)
+                    .cacheControl(IMAGE_CACHE_CONTROL)
                     .build();
 
             s3Template.upload(
@@ -87,15 +93,7 @@ public class S3ImageService {
         if (key == null) {
             return null;
         }
-
-        try {
-            S3Resource resource = s3Template.createResource(bucket, key);
-            return resource.getURL().toString();
-        } catch (IOException | SdkException exception) {
-            throw new ServiceException(
-                    StorageErrorCode.FILE_URL_CREATION_FAILED
-            );
-        }
+        return "https://" + cdnDomain + "/" + key;
     }
 
     public void deleteQuietly(String key) {
