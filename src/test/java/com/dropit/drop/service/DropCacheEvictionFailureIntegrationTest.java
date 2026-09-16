@@ -1,14 +1,6 @@
 package com.dropit.drop.service;
 
 import com.dropit.drop.cache.DropDetailCacheReader;
-import com.dropit.drop.cache.CacheReadFailureContext;
-import com.dropit.drop.cache.DropListCacheLoader;
-import com.dropit.drop.cache.DropListCacheMetrics;
-import com.dropit.drop.cache.DropListCacheReader;
-import com.dropit.drop.cache.DropListLocalFallback;
-import com.dropit.drop.cache.DropListLocalReadCache;
-import com.dropit.drop.cache.DropListStockReader;
-import com.dropit.drop.cache.RedisCacheCircuitBreaker;
 import com.dropit.drop.dto.request.DropUpdateRequest;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.repository.DropRepository;
@@ -34,7 +26,6 @@ import org.springframework.data.redis.connection.lettuce.LettuceClientConfigurat
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.GenericContainer;
@@ -45,36 +36,18 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest(properties = "spring.jpa.hibernate.ddl-auto=create-drop")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({DropService.class, DropDetailCacheReader.class, CacheReadFailureContext.class,
-        RedisCacheCircuitBreaker.class, QuerydslConfig.class, RedisCacheConfig.class,
+@Import({DropService.class, DropDetailCacheReader.class, QuerydslConfig.class, RedisCacheConfig.class,
         DropCacheEvictionFailureIntegrationTest.RedisTestConfig.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class DropCacheEvictionFailureIntegrationTest {
-
-    @MockitoBean
-    private DropListCacheReader dropListCacheReader;
-
-    @MockitoBean
-    private DropListCacheLoader dropListCacheLoader;
-
-    @MockitoBean
-    private DropListStockReader dropListStockReader;
-
-    @MockitoBean
-    private DropListCacheMetrics dropListCacheMetrics;
-
-    @MockitoBean
-    private DropListLocalFallback dropListLocalFallback;
-
-    @MockitoBean
-    private DropListLocalReadCache dropListLocalReadCache;
 
     private static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.4");
     private static final GenericContainer<?> REDIS = new GenericContainer<>(
@@ -112,7 +85,7 @@ class DropCacheEvictionFailureIntegrationTest {
     }
 
     @Test
-    void redisListEvictionFailurePreventsUpdateAndDelete() {
+    void redisEvictionFailureAfterCommitDoesNotFailUpdateOrDelete() {
         User seller = userRepository.save(new User(
                 "cache-eviction@test.invalid",
                 "unused",
@@ -136,16 +109,15 @@ class DropCacheEvictionFailureIntegrationTest {
         redisConnectionFactory.destroy();
         assertThrows(IllegalStateException.class, redisConnectionFactory::getConnection);
 
-        assertThrows(IllegalStateException.class, () -> dropService.update(
+        assertDoesNotThrow(() -> dropService.update(
                 seller.getId(),
                 updatedDrop.getId(),
                 new DropUpdateRequest(BigDecimal.valueOf(1500), null, null, null, null, null)
         ));
-        assertThrows(IllegalStateException.class,
-                () -> dropService.delete(seller.getId(), deletedDrop.getId()));
+        assertDoesNotThrow(() -> dropService.delete(seller.getId(), deletedDrop.getId()));
 
-        assertEquals(BigDecimal.valueOf(1000), dropRepository.findById(updatedDrop.getId()).orElseThrow().getPrice());
-        assertTrue(dropRepository.existsById(deletedDrop.getId()));
+        assertEquals(BigDecimal.valueOf(1500), dropRepository.findById(updatedDrop.getId()).orElseThrow().getPrice());
+        assertFalse(dropRepository.existsById(deletedDrop.getId()));
     }
 
     @TestConfiguration(proxyBeanMethods = false)

@@ -30,7 +30,6 @@ dependencies {
     implementation "io.github.openfeign.querydsl:querydsl-jpa:${querydslVersion}"
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.webjars:swagger-ui:5.32.11'
 
     implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:4.1.0')
