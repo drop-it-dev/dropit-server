@@ -30,12 +30,14 @@ dependencies {
     implementation "io.github.openfeign.querydsl:querydsl-jpa:${querydslVersion}"
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.webjars:swagger-ui:5.32.11'
 
     implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:4.1.0')
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-ses'
     implementation 'software.amazon.awssdk:url-connection-client'
 
     implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
@@ -67,7 +69,18 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    systemProperty 'test.runtime-classpath', sourceSets.test.runtimeClasspath.asPath
     outputs.dir(file('build/generated-snippets'))
+}
+
+def cleanRestDocsSnippets = tasks.register('cleanRestDocsSnippets', Delete) {
+    group = 'documentation'
+    description = 'OpenAPI 생성 전에 이전 REST Docs 스니펫을 삭제합니다.'
+    delete(layout.buildDirectory.dir('generated-snippets'))
+}
+
+tasks.named('test') {
+    dependsOn(cleanRestDocsSnippets)
 }
 
 openapi3 {
@@ -81,6 +94,7 @@ openapi3 {
 
 afterEvaluate {
     tasks.named('openapi3') {
+        dependsOn(cleanRestDocsSnippets)
         dependsOn(tasks.named('test'))
         doLast {
             File specFile = layout.buildDirectory.file('api-spec/openapi3.yaml').get().asFile
@@ -173,6 +187,20 @@ tasks.register('dbDown', Exec) {
     group = 'development'
     description = '로컬 DB 컨테이너를 종료합니다.'
     commandLine 'docker', 'compose', '--env-file', '.env.local', 'down'
+}
+
+tasks.register('localAwsUp', Exec) {
+    group = 'development'
+    description = 'AWS 권한 없이 SQS와 SES를 테스트할 LocalStack을 실행합니다.'
+    commandLine 'docker', 'compose', '--env-file', '.env.local',
+            '--profile', 'local-aws', 'up', '-d', '--wait', 'localstack'
+}
+
+tasks.register('localAwsDown', Exec) {
+    group = 'development'
+    description = 'LocalStack 컨테이너를 종료합니다.'
+    commandLine 'docker', 'compose', '--env-file', '.env.local',
+            '--profile', 'local-aws', 'stop', 'localstack'
 }
 
 def performanceComposeFile = file('performance/compose.performance.yml')

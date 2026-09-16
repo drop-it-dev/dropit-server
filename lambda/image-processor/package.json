@@ -1,0 +1,17 @@
+{
+  "name": "dropit-image-processor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AWS Lambda function that resizes Dropit images and converts them to WebP",
+  "main": "index.mjs",
+  "scripts": {
+    "test": "node --test index.test.mjs",
+    "package:x64": "npm ci --omit=dev --os=linux --cpu=x64 && zip -r image-processor.zip index.mjs package.json package-lock.json node_modules",
+    "package:arm64": "npm ci --omit=dev --os=linux --cpu=arm64 && zip -r image-processor.zip index.mjs package.json package-lock.json node_modules"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "sharp": "^0.35.4"
+  }
+}

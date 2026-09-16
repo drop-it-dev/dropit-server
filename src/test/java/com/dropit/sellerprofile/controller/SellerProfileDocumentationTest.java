@@ -119,6 +119,15 @@ class SellerProfileDocumentationTest extends DocumentationTestSupport {
                         .tag("Seller Profiles").summary("판매자 프로필 삭제").requestHeaders(authorizationHeader()).build())));
     }
 
+    @Test
+    void deleteImage() throws Exception {
+        mockMvc.perform(authenticated(delete("/seller-profiles/me/image")))
+                .andExpect(status().isNoContent())
+                .andDo(document("seller-profiles-delete-image", resource(builder()
+                        .tag("Seller Profiles").summary("판매자 프로필 이미지 삭제")
+                        .requestHeaders(authorizationHeader()).build())));
+    }
+
     private SellerProfileResponse response() {
         User seller = new User("seller@example.com", "encoded-password", "seller", UserRole.SELLER);
         ReflectionTestUtils.setField(seller, "id", 1L);

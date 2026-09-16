@@ -45,16 +45,23 @@ class S3ImageServiceTest {
     }
 
     @Test
-    @DisplayName("허용된 이미지 파일은 UUID 키와 MIME 타입 메타데이터로 업로드한다")
+    @DisplayName("이미지를 incoming 경로에 업로드하고 WebP 결과 키를 반환한다")
     void uploadImage() {
         MockMultipartFile file = new MockMultipartFile(
-                "file", "product.png", "image/png", new byte[]{1}
+                "file",
+                "product.png",
+                "image/png",
+                new byte[]{1}
         );
-        ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
+
+        ArgumentCaptor<String> keyCaptor =
+                ArgumentCaptor.forClass(String.class);
+
         ArgumentCaptor<ObjectMetadata> metadataCaptor =
                 ArgumentCaptor.forClass(ObjectMetadata.class);
 
-        String key = s3ImageService.upload(file, "products/100");
+        ImageUploadResult result =
+                s3ImageService.upload(file, "products/100");
 
         verify(s3Template).upload(
                 eq(BUCKET),
@@ -62,13 +69,43 @@ class S3ImageServiceTest {
                 any(InputStream.class),
                 metadataCaptor.capture()
         );
-        assertEquals(keyCaptor.getValue(), key);
-        assertEquals("image/png", metadataCaptor.getValue().getContentType());
+
         assertEquals(
-                "public, max-age=31536000, immutable",
+                keyCaptor.getValue(),
+                result.sourceKey()
+        );
+
+        assertTrue(
+                result.sourceKey().matches(
+                        "incoming/products/100/[\\w-]+\\.png"
+                )
+        );
+
+        assertTrue(
+                result.optimizedKey().matches(
+                        "optimized/products/100/[\\w-]+\\.webp"
+                )
+        );
+
+        assertEquals(
+                "image/png",
+                metadataCaptor.getValue().getContentType()
+        );
+
+        assertEquals(
+                "no-store",
                 metadataCaptor.getValue().getCacheControl()
         );
-        assertTrue(key.matches("products/100/[\\w-]+\\.png"));
+
+        String sourceId = result.sourceKey()
+                .replace("incoming/products/100/", "")
+                .replace(".png", "");
+
+        String optimizedId = result.optimizedKey()
+                .replace("optimized/products/100/", "")
+                .replace(".webp", "");
+
+        assertEquals(sourceId, optimizedId);
     }
 
     @Test

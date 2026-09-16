@@ -1,0 +1,63 @@
+{
+  "uid": "drop-list-saved-k6-comparison",
+  "title": "Drop 목록 조회 | Redis 적용 전후 실제 k6 결과",
+  "description": "저장된 k6 원본 요약을 InfluxDB로 가져온 비교 화면. 시간별 부하 추이가 아닌 시나리오별 집계 결과입니다.",
+  "tags": ["drop-list", "k6-summary", "redis", "portfolio"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "",
+  "time": {"from": "now-30d", "to": "now"},
+  "panels": [
+    {
+      "id": 1, "type": "text", "title": "실험 조건과 개선율", "gridPos": {"x": 0, "y": 0, "w": 24, "h": 5},
+      "options": {"mode": "markdown", "content": "## 같은 조회 API · Spring 2대 · Nginx · 동일 데이터\n**50명 동시 조회 p95:** Redis 적용 전 DB 직접 조회 → Redis 적용 후 **1차 99.68% 감소, 2차 99.49% 감소**. Redis + L1은 1차 Redis 대비 **23.52% 악화**, 2차 **50.73% 개선**입니다. 단발 실험에서 L1 효과는 일정하지 않았습니다.\n\n**100만 건 지속 조회(1,000 RPS · 18분):** Redis 적용 후 → Redis + L1에서 p95 **77.15% 감소**, HTTP 실패 **38,154 → 0건**, 정상 조회 **+57,632건(+5.70%)**. Redis 적용 전 DB 직접 조회는 이 큰 부하로 실행하지 않았습니다.\n\n이 그래프는 **저장된 k6 원본 요약값을 InfluxDB에 가져온 단계별 비교**입니다. 실시간 요청 시계열로 해석하면 안 됩니다."}
+    },
+    {
+      "id": 2, "type": "bargauge", "title": "50명 동시 조회 1차 · p95 (Redis 전 → 후 99.68% 감소)",
+      "gridPos": {"x": 0, "y": 5, "w": 12, "h": 8},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 2, "min": 0, "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"displayMode": "basic", "orientation": "horizontal", "showUnfilled": true, "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [
+        {"refId": "A", "alias": "Redis 적용 전 (DB)", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening50' AND \"run\"='1' AND \"stage\"='DB-direct'"},
+        {"refId": "B", "alias": "Redis 적용 후", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening50' AND \"run\"='1' AND \"stage\"='Redis'"},
+        {"refId": "C", "alias": "Redis + L1", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening50' AND \"run\"='1' AND \"stage\"='Redis-L1'"}
+      ]
+    },
+    {
+      "id": 3, "type": "bargauge", "title": "50명 동시 조회 2차 · p95 (Redis 전 → 후 99.49% 감소)",
+      "gridPos": {"x": 12, "y": 5, "w": 12, "h": 8},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 2, "min": 0, "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"displayMode": "basic", "orientation": "horizontal", "showUnfilled": true, "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [
+        {"refId": "A", "alias": "Redis 적용 전 (DB)", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening50' AND \"run\"='2' AND \"stage\"='DB-direct'"},
+        {"refId": "B", "alias": "Redis 적용 후", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening50' AND \"run\"='2' AND \"stage\"='Redis'"},
+        {"refId": "C", "alias": "Redis + L1", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening50' AND \"run\"='2' AND \"stage\"='Redis-L1'"}
+      ]
+    },
+    {
+      "id": 4, "type": "bargauge", "title": "100만 건 지속 조회 · p95 (L1 추가로 77.15% 감소)",
+      "gridPos": {"x": 0, "y": 13, "w": 12, "h": 8},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 2, "min": 0, "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"displayMode": "basic", "orientation": "horizontal", "showUnfilled": true, "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [
+        {"refId": "A", "alias": "Redis 적용 후", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='million' AND \"stage\"='Redis'"},
+        {"refId": "B", "alias": "Redis + L1", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='million' AND \"stage\"='Redis-L1'"}
+      ]
+    },
+    {
+      "id": 5, "type": "bargauge", "title": "100만 건 지속 조회 · HTTP 실패 (38,154 → 0건)",
+      "gridPos": {"x": 12, "y": 13, "w": 12, "h": 8},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "none", "decimals": 0, "min": 0, "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"displayMode": "basic", "orientation": "horizontal", "showUnfilled": true, "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [
+        {"refId": "A", "alias": "Redis 적용 후", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"failed\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='million' AND \"stage\"='Redis'"},
+        {"refId": "B", "alias": "Redis + L1", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"failed\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='million' AND \"stage\"='Redis-L1'"}
+      ]
+    }
+  ]
+}

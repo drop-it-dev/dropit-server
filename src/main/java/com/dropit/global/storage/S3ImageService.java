@@ -2,7 +2,6 @@ package com.dropit.global.storage;
 
 import com.dropit.global.exception.ServiceException;
 import io.awspring.cloud.s3.ObjectMetadata;
-import io.awspring.cloud.s3.S3Resource;
 import io.awspring.cloud.s3.S3Template;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +21,7 @@ import java.util.UUID;
 public class S3ImageService {
 
     private static final Duration URL_EXPIRATION = Duration.ofMinutes(10);
-
+    private static final String TEMPORARY_IMAGE_CACHE_CONTROL = "no-store";
     private static final String IMAGE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
     private static final Map<String, String> ALLOWED_IMAGE_TYPES = Map.of(
@@ -39,31 +38,47 @@ public class S3ImageService {
     @Value("${app.cdn.domain}")
     private String cdnDomain;
 
-    public String upload(MultipartFile file, String directory) {
+    public ImageUploadResult upload(
+            MultipartFile file,
+            String directory
+    ) {
         validate(file);
 
         String contentType = file.getContentType();
         String extension = ALLOWED_IMAGE_TYPES.get(contentType);
+        String imageId = UUID.randomUUID().toString();
 
-        String key = directory
-                + "/"
-                + UUID.randomUUID()
-                + extension;
+        String sourceKey =
+                "incoming/"
+                        + directory
+                        + "/"
+                        + imageId
+                        + extension;
+
+        String optimizedKey =
+                "optimized/"
+                        + directory
+                        + "/"
+                        + imageId
+                        + ".webp";
 
         try {
             ObjectMetadata metadata = ObjectMetadata.builder()
                     .contentType(contentType)
-                    .cacheControl(IMAGE_CACHE_CONTROL)
+                    .cacheControl(TEMPORARY_IMAGE_CACHE_CONTROL)
                     .build();
 
             s3Template.upload(
                     bucket,
-                    key,
+                    sourceKey,
                     file.getInputStream(),
                     metadata
             );
 
-            return key;
+            return new ImageUploadResult(
+                    sourceKey,
+                    optimizedKey
+            );
         } catch (IOException | SdkException exception) {
             throw new ServiceException(
                     StorageErrorCode.FILE_UPLOAD_FAILED

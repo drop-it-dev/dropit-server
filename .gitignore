@@ -44,3 +44,9 @@ out/
 performance/reports/*.html
 performance/results/raw/
 performance/results/*.zip
+
+### AWS Lambda ###
+lambda/**/node_modules/
+lambda/**/*.zip
+lambda/**/coverage/
+lambda/**/.aws-sam/

@@ -35,9 +35,11 @@ public class SecurityConfig {
 
     public static final RequestMatcher PUBLIC_ENDPOINTS = new OrRequestMatcher(
             PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/actuator/health"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/actuator/prometheus"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/signup"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/login"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/reissue"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/rankings/sellers"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/drops"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/drops/{dropId}")
     );

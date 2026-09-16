@@ -1,0 +1,273 @@
+{
+  "info": {
+    "_postman_id": "7a647164-cae6-4c81-bf61-5d5456fcd15b",
+    "name": "Dropit - 구매 완료 자동 이메일 (LocalStack)",
+    "description": "판매자/구매자 생성부터 실제 구매 완료, 주문 SQS, 이메일 Outbox, 이메일 SQS, SES 저장까지 한 번에 확인합니다.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "localstackUrl", "value": "http://localhost:4566" },
+    { "key": "password", "value": "dropit1234" },
+    { "key": "sellerEmail", "value": "" },
+    { "key": "buyerEmail", "value": "" },
+    { "key": "sellerToken", "value": "" },
+    { "key": "buyerToken", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "dropId", "value": "" },
+    { "key": "requestId", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "pollCount", "value": "0" },
+    { "key": "emailPollCount", "value": "0" },
+    { "key": "purchaseApiMs", "value": "" },
+    { "key": "orderCompletedMs", "value": "" },
+    { "key": "emailCompletedMs", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. 판매자 회원가입",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const runId = Date.now();",
+              "pm.collectionVariables.set('sellerEmail', `seller-${runId}@dropit.local`);",
+              "pm.collectionVariables.set('buyerEmail', `buyer-${runId}@dropit.local`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('판매자 생성: 201', () => pm.response.to.have.status(201));"] }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{sellerEmail}}\",\n  \"password\": \"{{password}}\",\n  \"username\": \"로컬 판매자\",\n  \"role\": \"SELLER\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/signup"
+      }
+    },
+    {
+      "name": "2. 판매자 로그인",
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('판매자 로그인: 200', () => pm.response.to.have.status(200));",
+          "pm.collectionVariables.set('sellerToken', pm.response.json().accessToken);"
+        ] }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{sellerEmail}}\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "3. 상품 생성",
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('상품 생성: 201', () => pm.response.to.have.status(201));",
+          "pm.collectionVariables.set('productId', pm.response.json());"
+        ] }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{sellerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"구매 이메일 테스트 한정판\",\n  \"description\": \"Postman 전체 흐름 테스트용 상품\"\n}" },
+        "url": "{{baseUrl}}/products"
+      }
+    },
+    {
+      "name": "4. Drop 생성",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": { "exec": [
+            "const openAt = new Date(Date.now() + 5000);",
+            "const closeAt = new Date(Date.now() + 3600000);",
+            "const local = date => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 19);",
+            "pm.variables.set('openAt', local(openAt));",
+            "pm.variables.set('closeAt', local(closeAt));",
+            "pm.collectionVariables.set('dropOpensAt', openAt.getTime().toString());"
+          ] }
+        },
+        {
+          "listen": "test",
+          "script": { "exec": [
+            "pm.test('Drop 생성: 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('dropId', pm.response.json());"
+          ] }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{sellerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"productId\": {{productId}},\n  \"price\": 49000,\n  \"initialQuantity\": 100,\n  \"discountRate\": 10,\n  \"purchaseLimit\": 2,\n  \"openAt\": \"{{openAt}}\",\n  \"closeAt\": \"{{closeAt}}\"\n}" },
+        "url": "{{baseUrl}}/drops"
+      }
+    },
+    {
+      "name": "5. Drop 공개 및 Redis 재고 준비",
+      "event": [{
+        "listen": "test",
+        "script": { "exec": ["pm.test('Drop 공개: 200', () => pm.response.to.have.status(200));"] }
+      }],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{sellerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"visible\": true\n}" },
+        "url": "{{baseUrl}}/drops/{{dropId}}/visibility"
+      }
+    },
+    {
+      "name": "6. 구매자 회원가입",
+      "event": [{
+        "listen": "test",
+        "script": { "exec": ["pm.test('구매자 생성: 201', () => pm.response.to.have.status(201));"] }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{buyerEmail}}\",\n  \"password\": \"{{password}}\",\n  \"username\": \"로컬 구매자\",\n  \"role\": \"USER\"\n}" },
+        "url": "{{baseUrl}}/auth/signup"
+      }
+    },
+    {
+      "name": "7. 구매자 로그인",
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('구매자 로그인: 200', () => pm.response.to.have.status(200));",
+          "pm.collectionVariables.set('buyerToken', pm.response.json().accessToken);"
+        ] }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{buyerEmail}}\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "8. 실제 구매 요청",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": { "exec": [
+            "const waitMs = Math.max(0, Number(pm.collectionVariables.get('dropOpensAt')) - Date.now() + 300);",
+            "if (waitMs > 0) { const until = Date.now() + waitMs; while (Date.now() < until) {} }",
+            "pm.variables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));",
+            "pm.collectionVariables.set('purchaseStartedAt', Date.now().toString());",
+            "pm.collectionVariables.set('pollCount', '0');",
+            "pm.collectionVariables.set('emailPollCount', '0');"
+          ] }
+        },
+        {
+          "listen": "test",
+          "script": { "exec": [
+            "pm.test('구매 접수: 202', () => pm.response.to.have.status(202));",
+            "pm.collectionVariables.set('requestId', pm.response.json().requestId);",
+            "pm.collectionVariables.set('purchaseApiMs', pm.response.responseTime.toString());",
+            "console.log(`구매 API 접수 시간: ${pm.response.responseTime}ms`);"
+          ] }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{buyerToken}}" },
+          { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"items\": [\n    {\n      \"dropId\": {{dropId}},\n      \"quantity\": 1\n    }\n  ]\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "9. 주문 완료 상태 확인",
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('주문 상태 조회: 200', () => pm.response.to.have.status(200));",
+          "const body = pm.response.json();",
+          "const count = Number(pm.collectionVariables.get('pollCount') || 0) + 1;",
+          "pm.collectionVariables.set('pollCount', count.toString());",
+          "if (body.status === 'SUCCEEDED') {",
+          "  pm.collectionVariables.set('orderId', body.orderId);",
+          "  const elapsed = Date.now() - Number(pm.collectionVariables.get('purchaseStartedAt'));",
+          "  pm.collectionVariables.set('orderCompletedMs', elapsed.toString());",
+          "  console.log(`구매 요청부터 주문 완료까지: ${elapsed}ms`);",
+          "  pm.test('주문 생성 성공', () => pm.expect(body.orderId).to.exist);",
+          "} else if (body.status === 'FAILED') {",
+          "  throw new Error(`주문 처리 실패: ${body.failureCode}`);",
+          "} else if (count < 40) {",
+          "  pm.execution.setNextRequest('9. 주문 완료 상태 확인');",
+          "} else {",
+          "  throw new Error('10초 안에 주문 처리가 끝나지 않았습니다.');",
+          "}"
+        ] }
+      }],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{buyerToken}}" }],
+        "url": "{{baseUrl}}/order-requests/{{requestId}}"
+      }
+    },
+    {
+      "name": "10. 자동 발송된 이메일 확인",
+      "event": [{
+        "listen": "test",
+        "script": { "exec": [
+          "pm.test('LocalStack SES 조회: 200', () => pm.response.to.have.status(200));",
+          "  const body = pm.response.json();",
+          "  const messages = body.messages || body.Messages || [];",
+          "  const recipient = pm.collectionVariables.get('buyerEmail');",
+          "  const email = messages.find(message => {",
+          "    const addresses = message.Destination?.ToAddresses || message.destination?.toAddresses || [];",
+          "    return addresses.includes(recipient);",
+          "  });",
+          "  const count = Number(pm.collectionVariables.get('emailPollCount') || 0) + 1;",
+          "  pm.collectionVariables.set('emailPollCount', count.toString());",
+          "  if (!email && count < 40) {",
+          "    pm.execution.setNextRequest('10. 자동 발송된 이메일 확인');",
+          "  } else if (!email) {",
+          "    throw new Error('10초 안에 구매 완료 이메일이 도착하지 않았습니다.');",
+          "  } else {",
+          "    const elapsed = Date.now() - Number(pm.collectionVariables.get('purchaseStartedAt'));",
+          "    pm.collectionVariables.set('emailCompletedMs', elapsed.toString());",
+          "    pm.test('현재 구매자의 이메일 저장 성공', () => pm.expect(email).to.exist);",
+          "    console.log(`구매 요청부터 이메일 확인까지: ${elapsed}ms`);",
+          "    const data = {",
+          "      purchaseApiMs: pm.collectionVariables.get('purchaseApiMs'),",
+          "      orderCompletedMs: pm.collectionVariables.get('orderCompletedMs'),",
+          "      emailCompletedMs: elapsed,",
+          "      orderId: pm.collectionVariables.get('orderId'),",
+          "      recipient",
+          "    };",
+          "    pm.visualizer.set(`<style>body{font-family:Arial;padding:18px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:10px;text-align:left}th{background:#333;color:#fff}.ok{color:#07852c;font-weight:bold}</style><h2>구매 완료 자동 이메일 결과</h2><table><tr><th>측정 항목</th><th>결과</th></tr><tr><td>구매 API 접수</td><td>{{purchaseApiMs}} ms</td></tr><tr><td>주문 생성 완료</td><td>{{orderCompletedMs}} ms</td></tr><tr><td>이메일 발송 완료</td><td>{{emailCompletedMs}} ms</td></tr><tr><td>주문 ID</td><td>{{orderId}}</td></tr><tr><td>수신자</td><td>{{recipient}}</td></tr><tr><td>상태</td><td class=\"ok\">성공</td></tr></table>`, data);",
+          "  }"
+        ] }
+      }],
+      "request": {
+        "method": "GET",
+        "url": "{{localstackUrl}}/_aws/ses"
+      }
+    }
+  ]
+}

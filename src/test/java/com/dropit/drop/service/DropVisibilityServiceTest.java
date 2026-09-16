@@ -2,6 +2,7 @@ package com.dropit.drop.service;
 
 import com.dropit.drop.cache.DropSaleCacheWriter;
 import com.dropit.drop.cache.DropSaleSnapshot;
+import com.dropit.drop.cache.DropListLocalReadCache;
 import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.repository.DropRepository;
@@ -36,6 +37,7 @@ class DropVisibilityServiceTest {
         DropUserPurchaseRepository purchaseRepository = mock(DropUserPurchaseRepository.class);
         DropSaleCacheWriter cacheWriter = mock(DropSaleCacheWriter.class);
         TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
+        DropListLocalReadCache localReadCache = mock(DropListLocalReadCache.class);
         when(transactionTemplate.execute(any())).thenAnswer(invocation ->
                 ((TransactionCallback<Object>) invocation.getArgument(0))
                         .doInTransaction(mock(TransactionStatus.class)));
@@ -43,7 +45,7 @@ class DropVisibilityServiceTest {
         when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
 
         var response = new DropVisibilityService(
-                dropRepository, itemRepository, purchaseRepository, cacheWriter, transactionTemplate)
+                dropRepository, itemRepository, purchaseRepository, cacheWriter, transactionTemplate, localReadCache)
                 .changeVisibility(1L, 100L, new DropVisibilityUpdateRequest(true));
 
         assertAll(
@@ -63,6 +65,7 @@ class DropVisibilityServiceTest {
         DropUserPurchaseRepository purchaseRepository = mock(DropUserPurchaseRepository.class);
         DropSaleCacheWriter cacheWriter = mock(DropSaleCacheWriter.class);
         TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
+        DropListLocalReadCache localReadCache = mock(DropListLocalReadCache.class);
         when(transactionTemplate.execute(any())).thenAnswer(invocation ->
                 ((TransactionCallback<Object>) invocation.getArgument(0))
                         .doInTransaction(mock(TransactionStatus.class)));
@@ -71,7 +74,7 @@ class DropVisibilityServiceTest {
         drop.changeVisibility(false);
         when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
 
-        new DropVisibilityService(dropRepository, itemRepository, purchaseRepository, cacheWriter, transactionTemplate)
+        new DropVisibilityService(dropRepository, itemRepository, purchaseRepository, cacheWriter, transactionTemplate, localReadCache)
                 .changeVisibility(1L, 100L, new DropVisibilityUpdateRequest(true));
 
         assertEquals(1L, drop.getSaleVersion());

@@ -1,0 +1,39 @@
+{
+  "uid": "drop-list-opening-4000-comparison",
+  "title": "Drop 목록 판매 시작 | 4,000명 Redis·L1 실측 비교",
+  "description": "4,000명 동시 단발 조회. Redis 전 DB 직접 조회는 안전 게이트로 미실행했으며, 50명 결과는 별도 참고값입니다.",
+  "tags": ["drop-list", "opening-4000", "k6-summary", "redis"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "",
+  "time": {"from": "now-30d", "to": "now"},
+  "panels": [
+    {
+      "id": 1, "type": "text", "title": "세 단계와 부하 안전 기준", "gridPos": {"x": 0, "y": 0, "w": 24, "h": 7},
+      "options": {"mode": "markdown", "content": "## 4,000명이 같은 `GET /drops?sortType=LATEST&page=0&size=20`을 각각 한 번 조회\n동일 JAR · Spring 2대 · Nginx · k6 발생기 2GB/2CPU 제한. 각 측정 4,000/4,000건 성공, HTTP 실패 0건.\n\n| 단계 | 4,000명 1차 p95 | 4,000명 2차 p95 |\n| --- | ---: | ---: |\n| **Redis 적용 전(DB 직접 조회)** | **미실행** | **미실행** |\n| Redis 적용 후 | 8.94초 | 8.51초 |\n| Redis + 서버별 L1(200ms) | 12.06초 | 12.36초 |\n\n**L1 추가는 Redis만 사용할 때보다 1차 34.91%, 2차 45.27% 느렸습니다.** 따라서 4,000명 판매 시작 조회에서 L1을 개선으로 주장하지 않습니다. Redis 적용 전 DB 직접 조회는 50명만으로 p95 22.74초·19.78초였고 로컬 PC 과부하 위험으로 4,000명을 강행하지 않았습니다. 50명 결과와 4,000명 결과를 같은 부하의 개선율로 계산하지 않습니다.\n\n아래 그래프는 저장된 k6 요약을 InfluxDB에 가져온 실측 단계별 집계이며 실시간 시계열이 아닙니다."}
+    },
+    {
+      "id": 2, "type": "bargauge", "title": "4,000명 1차 p95 · L1 추가 후 34.91% 악화",
+      "gridPos": {"x": 0, "y": 7, "w": 12, "h": 8},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 2, "min": 0, "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"displayMode": "basic", "orientation": "horizontal", "showUnfilled": true, "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [
+        {"refId": "A", "alias": "Redis 적용 후", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening4000' AND \"run\"='1' AND \"stage\"='Redis'"},
+        {"refId": "B", "alias": "Redis + L1", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening4000' AND \"run\"='1' AND \"stage\"='Redis-L1'"}
+      ]
+    },
+    {
+      "id": 3, "type": "bargauge", "title": "4,000명 2차 p95 · L1 추가 후 45.27% 악화",
+      "gridPos": {"x": 12, "y": 7, "w": 12, "h": 8},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 2, "min": 0, "color": {"mode": "palette-classic"}}, "overrides": []},
+      "options": {"displayMode": "basic", "orientation": "horizontal", "showUnfilled": true, "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}},
+      "targets": [
+        {"refId": "A", "alias": "Redis 적용 후", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening4000' AND \"run\"='2' AND \"stage\"='Redis'"},
+        {"refId": "B", "alias": "Redis + L1", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening4000' AND \"run\"='2' AND \"stage\"='Redis-L1'"}
+      ]
+    }
+  ]
+}

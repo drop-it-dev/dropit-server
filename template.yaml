@@ -1,0 +1,165 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Dropit asynchronous S3 image resizing and WebP conversion
+
+Parameters:
+  ImageBucketName:
+    Type: String
+    Default: dropit-s3-images
+    Description: Existing S3 bucket used by the Dropit application
+
+  FunctionName:
+    Type: String
+    Default: dropit-image-processor
+
+  LambdaArchitecture:
+    Type: String
+    Default: x86_64
+    AllowedValues:
+      - x86_64
+      - arm64
+    Description: Must match the architecture used when installing Sharp
+
+  AlertEmail:
+    Type: String
+    Default: ""
+    Description: Optional email address for processing-failure notifications
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, ""]]
+
+Resources:
+  ImageProcessingDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: dropit-image-processing-dlq
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+
+  ImageProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref FunctionName
+      Description: Resizes incoming Dropit images and converts them to WebP
+      CodeUri: lambda/image-processor/
+      Handler: index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - !Ref LambdaArchitecture
+      MemorySize: 1024
+      Timeout: 30
+      EphemeralStorage:
+        Size: 512
+      ReservedConcurrentExecutions: 5
+      Environment:
+        Variables:
+          LOG_LEVEL: INFO
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Sid: ReadAndDeleteIncomingImages
+              Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:DeleteObject
+              Resource: !Sub arn:${AWS::Partition}:s3:::${ImageBucketName}/incoming/*
+            - Sid: WriteOptimizedImages
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: !Sub arn:${AWS::Partition}:s3:::${ImageBucketName}/optimized/*
+            - Sid: SendFailureToDeadLetterQueue
+              Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt ImageProcessingDeadLetterQueue.Arn
+      EventInvokeConfig:
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt ImageProcessingDeadLetterQueue.Arn
+
+  AllowS3ToInvokeImageProcessor:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ImageProcessorFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:${AWS::Partition}:s3:::${ImageBucketName}
+
+  ImageProcessorErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: dropit-image-processor-errors
+      AlarmDescription: Lambda image processing produced one or more errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ImageProcessorFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - HasAlertEmail
+        - - !Ref ImageProcessingAlertTopic
+        - !Ref AWS::NoValue
+
+  DeadLetterQueueAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: dropit-image-processing-dlq-not-empty
+      AlarmDescription: An image could not be processed after Lambda retries
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ImageProcessingDeadLetterQueue.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - HasAlertEmail
+        - - !Ref ImageProcessingAlertTopic
+        - !Ref AWS::NoValue
+
+  ImageProcessingAlertTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasAlertEmail
+    Properties:
+      TopicName: dropit-image-processing-alerts
+
+  ImageProcessingAlertSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+      TopicArn: !Ref ImageProcessingAlertTopic
+
+Outputs:
+  FunctionArn:
+    Description: ARN of the image-processing Lambda function
+    Value: !GetAtt ImageProcessorFunction.Arn
+
+  DeadLetterQueueUrl:
+    Description: Queue containing image-processing failures
+    Value: !Ref ImageProcessingDeadLetterQueue
+
+  ConfigureExistingBucketCommand:
+    Description: Run after deployment to attach the existing S3 bucket trigger
+    Value: !Sub >-
+      aws s3api put-bucket-notification-configuration
+      --bucket ${ImageBucketName}
+      --notification-configuration
+      '{"LambdaFunctionConfigurations":[{"Id":"dropit-image-processor","LambdaFunctionArn":"${ImageProcessorFunction.Arn}","Events":["s3:ObjectCreated:*"],"Filter":{"Key":{"FilterRules":[{"Name":"prefix","Value":"incoming/"}]}}}]}'
