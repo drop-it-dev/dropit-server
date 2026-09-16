@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 2s
+  evaluation_interval: 2s
+
+scrape_configs:
+  - job_name: drop-list-apps
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - dropit-list-app-1:8080
+          - dropit-list-app-2:8080
