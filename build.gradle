@@ -80,7 +80,7 @@ def cleanRestDocsSnippets = tasks.register('cleanRestDocsSnippets', Delete) {
 }
 
 tasks.named('test') {
-    mustRunAfter(cleanRestDocsSnippets)
+    dependsOn(cleanRestDocsSnippets)
 }
 
 openapi3 {
