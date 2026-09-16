@@ -4,6 +4,7 @@ import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
 import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.exception.ServiceException;
+import com.dropit.notification.email.outbox.PurchaseEmailOutboxService;
 import com.dropit.order.entity.Order;
 import com.dropit.order.entity.OrderItem;
 import com.dropit.order.entity.OrderRequest;
@@ -35,6 +36,7 @@ public class OrderFinalizationService {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final PurchaseEmailOutboxService purchaseEmailOutboxService;
 
     @Transactional
     public void finalizeOrder(UUID requestId) {
@@ -72,7 +74,15 @@ public class OrderFinalizationService {
                 request.getQuantity()
         ));
 
-        request.succeed(order);
+        if (request.succeed(order)) {
+            purchaseEmailOutboxService.savePurchaseCompleted(
+                    order.getId(),
+                    user,
+                    request.getProductName(),
+                    request.getQuantity(),
+                    totalPrice
+            );
+        }
     }
 
     private void reservePurchaseLimit(Long userId, Drop drop, int quantity) {
