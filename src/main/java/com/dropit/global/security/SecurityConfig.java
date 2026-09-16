@@ -39,6 +39,7 @@ public class SecurityConfig {
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/signup"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/login"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.POST, "/auth/reissue"),
+            PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/rankings/sellers"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/drops"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/drops/{dropId}")
     );
