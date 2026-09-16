@@ -1,6 +1,7 @@
 package com.dropit.drop.service;
 
 import com.dropit.drop.cache.DropListCacheLoader;
+import com.dropit.drop.cache.DropDetailCacheReader;
 import com.dropit.drop.cache.CacheReadFailureContext;
 import com.dropit.drop.cache.DropListCacheMetrics;
 import com.dropit.drop.cache.DropListCacheReader;
@@ -63,6 +64,9 @@ import static org.mockito.Mockito.when;
         DropCacheFailureIntegrationTest.UnavailableRedisConfig.class
 })
 class DropCacheFailureIntegrationTest {
+
+    @MockitoBean
+    private DropDetailCacheReader dropDetailCacheReader;
 
     @MockitoBean
     private DropRepository dropRepository;

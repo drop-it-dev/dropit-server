@@ -1,5 +1,18 @@
 package com.dropit.drop.service;
 
+import com.dropit.drop.cache.DropDetailCacheValue;
+import com.dropit.drop.cache.DropDetailCacheReader;
+import com.dropit.drop.cache.CacheReadFailureContext;
+import com.dropit.drop.cache.DropListCacheLoader;
+import com.dropit.drop.cache.DropListCacheMetrics;
+import com.dropit.drop.cache.DropListCacheReader;
+import com.dropit.drop.cache.DropListCacheValue;
+import com.dropit.drop.cache.DropListLocalReadCache;
+import com.dropit.drop.cache.DropListLocalFallback;
+import com.dropit.drop.cache.DropListStockDbFallbackCache;
+import com.dropit.drop.cache.DropListStockReader;
+import com.dropit.drop.cache.RedisCacheCircuitBreaker;
+import com.dropit.drop.cache.RedisStockCircuitBreaker;
 import com.dropit.drop.cache.DropSaleCacheWriter;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
@@ -61,7 +74,23 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringJUnitConfig
-@Import({DropService.class, DropVisibilityService.class, RedisCacheConfig.class, DropCacheIntegrationTest.RedisTestConfig.class})
+@Import({
+        DropService.class,
+        DropVisibilityService.class,
+        DropDetailCacheReader.class,
+        DropListCacheReader.class,
+        DropListCacheLoader.class,
+        DropListStockReader.class,
+        DropListStockDbFallbackCache.class,
+        DropListLocalFallback.class,
+        DropListLocalReadCache.class,
+        CacheReadFailureContext.class,
+        RedisCacheCircuitBreaker.class,
+        RedisStockCircuitBreaker.class,
+        ProductService.class,
+        RedisCacheConfig.class,
+        DropCacheIntegrationTest.RedisTestConfig.class
+})
 class DropCacheIntegrationTest {
 
     private static final GenericContainer<?> REDIS = new GenericContainer<>(

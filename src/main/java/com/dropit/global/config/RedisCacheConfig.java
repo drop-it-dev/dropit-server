@@ -1,6 +1,13 @@
 package com.dropit.global.config;
 
+import com.dropit.drop.cache.CacheReadFailureContext;
+import com.dropit.drop.cache.RedisCacheCircuitBreaker;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.annotation.CachingConfigurer;
+import org.springframework.cache.interceptor.CacheErrorHandler;
+import org.springframework.cache.transaction.TransactionAwareCacheDecorator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.CacheStatisticsCollector;
@@ -18,7 +25,11 @@ import java.util.Map;
 
 @Configuration
 @EnableCaching
-public class RedisCacheConfig {
+@RequiredArgsConstructor
+public class RedisCacheConfig implements CachingConfigurer {
+
+    private final CacheReadFailureContext cacheReadFailureContext;
+    private final RedisCacheCircuitBreaker redisCacheCircuitBreaker;
 
     public static final String DROP_DETAIL_CACHE = "dropDetail";
     public static final String DROP_LIST_CACHE = "dropList";
@@ -36,21 +47,52 @@ public class RedisCacheConfig {
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
                         RedisSerializer.json()
                 ));
-        RedisCacheConfiguration dropDetailConfiguration = defaultConfiguration.entryTtl(DROP_DETAIL_TTL);
         RedisCacheWriter cacheWriter = RedisCacheWriter.nonLockingRedisCacheWriter(connectionFactory)
                 .withStatisticsCollector(CacheStatisticsCollector.create());
 
         return new FailOpenRedisCacheManager(
                 cacheWriter,
                 defaultConfiguration,
-                Map.of(DROP_DETAIL_CACHE, dropDetailConfiguration),
+                Map.of(
+                        DROP_DETAIL_CACHE, defaultConfiguration.entryTtl(DROP_DETAIL_TTL),
+                        DROP_LIST_CACHE, defaultConfiguration.entryTtl(DROP_LIST_TTL)
+                ),
                 errorHandler()
         );
     }
 
     @Override
     public CacheErrorHandler errorHandler() {
-        return new FailOpenCacheErrorHandler();
+        CacheErrorHandler detailHandler = new FailOpenCacheErrorHandler();
+        CacheErrorHandler listHandler = new DropCacheErrorHandler(
+                cacheReadFailureContext,
+                redisCacheCircuitBreaker
+        );
+        return new CacheErrorHandler() {
+            private CacheErrorHandler forCache(Cache cache) {
+                return DROP_LIST_CACHE.equals(cache.getName()) ? listHandler : detailHandler;
+            }
+
+            @Override
+            public void handleCacheGetError(RuntimeException exception, Cache cache, Object key) {
+                forCache(cache).handleCacheGetError(exception, cache, key);
+            }
+
+            @Override
+            public void handleCachePutError(RuntimeException exception, Cache cache, Object key, Object value) {
+                forCache(cache).handleCachePutError(exception, cache, key, value);
+            }
+
+            @Override
+            public void handleCacheEvictError(RuntimeException exception, Cache cache, Object key) {
+                forCache(cache).handleCacheEvictError(exception, cache, key);
+            }
+
+            @Override
+            public void handleCacheClearError(RuntimeException exception, Cache cache) {
+                forCache(cache).handleCacheClearError(exception, cache);
+            }
+        };
     }
 
     private static final class FailOpenRedisCacheManager extends RedisCacheManager {
@@ -73,23 +115,35 @@ public class RedisCacheConfig {
         }
     }
 
-        return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(defaultConfiguration)
-                .withCacheConfiguration(
-                        DROP_DETAIL_CACHE,
-                        defaultConfiguration.entryTtl(DROP_DETAIL_TTL)
-                )
-                .disableCreateOnMissingCache()
-                .transactionAware()
-                .enableStatistics()
-                .build();
-    }
+    private static final class FailOpenTransactionAwareCacheDecorator extends TransactionAwareCacheDecorator {
 
-    @Override
-    public CacheErrorHandler errorHandler() {
-        return new DropCacheErrorHandler(
-                cacheReadFailureContext,
-                redisCacheCircuitBreaker
-        );
+        private final CacheErrorHandler errorHandler;
+
+        private FailOpenTransactionAwareCacheDecorator(Cache targetCache, CacheErrorHandler errorHandler) {
+            super(targetCache);
+            this.errorHandler = errorHandler;
+        }
+
+        @Override
+        public void evict(Object key) {
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        evictNow(key);
+                    }
+                });
+                return;
+            }
+            evictNow(key);
+        }
+
+        private void evictNow(Object key) {
+            try {
+                getTargetCache().evict(key);
+            } catch (RuntimeException exception) {
+                errorHandler.handleCacheEvictError(exception, getTargetCache(), key);
+            }
+        }
     }
 }

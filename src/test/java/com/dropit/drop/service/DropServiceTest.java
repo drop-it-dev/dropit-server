@@ -1,5 +1,14 @@
 package com.dropit.drop.service;
 
+import com.dropit.drop.cache.DropDetailCacheReader;
+import com.dropit.drop.cache.DropDetailCacheValue;
+import com.dropit.drop.cache.DropListCacheLoader;
+import com.dropit.drop.cache.DropListCacheMetrics;
+import com.dropit.drop.cache.DropListCacheReader;
+import com.dropit.drop.cache.DropListCacheValue;
+import com.dropit.drop.cache.DropListLocalFallback;
+import com.dropit.drop.cache.DropListLocalReadCache;
+import com.dropit.drop.cache.DropListStockReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
@@ -47,6 +56,27 @@ class DropServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private DropDetailCacheReader dropDetailCacheReader;
+
+    @Mock
+    private DropListCacheReader dropListCacheReader;
+
+    @Mock
+    private DropListCacheLoader dropListCacheLoader;
+
+    @Mock
+    private DropListStockReader dropListStockReader;
+
+    @Mock
+    private DropListCacheMetrics dropListCacheMetrics;
+
+    @Mock
+    private DropListLocalFallback dropListLocalFallback;
+
+    @Mock
+    private DropListLocalReadCache dropListLocalReadCache;
 
     @InjectMocks
     private DropService dropService;

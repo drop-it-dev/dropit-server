@@ -1,5 +1,14 @@
 package com.dropit.drop.service;
 
+import com.dropit.drop.cache.DropDetailCacheReader;
+import com.dropit.drop.cache.DropDetailCacheValue;
+import com.dropit.drop.cache.DropListCacheLoader;
+import com.dropit.drop.cache.DropListCacheMetrics;
+import com.dropit.drop.cache.DropListCacheReader;
+import com.dropit.drop.cache.DropListCacheValue;
+import com.dropit.drop.cache.DropListLocalFallback;
+import com.dropit.drop.cache.DropListLocalReadCache;
+import com.dropit.drop.cache.DropListStockReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropSortType;
@@ -17,7 +26,7 @@ import com.dropit.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +42,19 @@ public class DropService {
 
     private final DropRepository dropRepository;
     private final ProductRepository productRepository;
+    private final DropDetailCacheReader dropDetailCacheReader;
+    private final DropListCacheReader dropListCacheReader;
+    private final DropListCacheLoader dropListCacheLoader;
+    private final DropListStockReader dropListStockReader;
+    private final DropListCacheMetrics dropListCacheMetrics;
+    private final DropListLocalFallback dropListLocalFallback;
+    private final DropListLocalReadCache dropListLocalReadCache;
+
+    @Value("${app.drop.list.redis-cache.enabled:true}")
+    private boolean listRedisCacheEnabled = true;
+
+    @Value("${app.drop.list.local-cache.enabled:true}")
+    private boolean listLocalCacheEnabled = true;
 
     @Transactional
     @CacheEvict(
