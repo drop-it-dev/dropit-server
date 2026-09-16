@@ -2,13 +2,6 @@ package com.dropit.drop.service;
 
 import com.dropit.drop.cache.DropDetailCacheReader;
 import com.dropit.drop.cache.DropDetailCacheValue;
-import com.dropit.drop.cache.DropListCacheLoader;
-import com.dropit.drop.cache.DropListCacheMetrics;
-import com.dropit.drop.cache.DropListCacheReader;
-import com.dropit.drop.cache.DropListCacheValue;
-import com.dropit.drop.cache.DropListLocalFallback;
-import com.dropit.drop.cache.DropListLocalReadCache;
-import com.dropit.drop.cache.DropListStockReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
@@ -40,7 +33,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,24 +51,6 @@ class DropServiceTest {
 
     @Mock
     private DropDetailCacheReader dropDetailCacheReader;
-
-    @Mock
-    private DropListCacheReader dropListCacheReader;
-
-    @Mock
-    private DropListCacheLoader dropListCacheLoader;
-
-    @Mock
-    private DropListStockReader dropListStockReader;
-
-    @Mock
-    private DropListCacheMetrics dropListCacheMetrics;
-
-    @Mock
-    private DropListLocalFallback dropListLocalFallback;
-
-    @Mock
-    private DropListLocalReadCache dropListLocalReadCache;
 
     @InjectMocks
     private DropService dropService;
@@ -157,59 +131,14 @@ class DropServiceTest {
         Drop second = saveDrop(1L, 11L, 101L, LocalDateTime.now().plusDays(2));
         DropSearchCondition condition = new DropSearchCondition(null, null, null);
         Pageable pageable = PageRequest.of(0, 20);
-        DropListCacheValue cachedPage = DropListCacheValue.from(
-                new PageImpl<>(List.of(first, second), pageable, 2)
-        );
-        when(dropListCacheReader.getLatestFirstPage()).thenReturn(cachedPage);
-        when(dropListLocalReadCache.get(any())).thenAnswer(invocation ->
-                ((java.util.function.Supplier<?>) invocation.getArgument(0)).get()
-        );
-        when(dropListStockReader.getRemainingQuantities(List.of(100L, 101L)))
-                .thenReturn(Map.of(100L, 7, 101L, 4));
+        when(dropRepository.searchPublicDrops(condition, pageable))
+                .thenReturn(new PageImpl<>(List.of(first, second), pageable, 2));
 
         Page<DropResponse> responses = dropService.getAll(condition, pageable);
 
         assertEquals(2, responses.getTotalElements());
         assertEquals(100L, responses.getContent().get(0).id());
         assertEquals(101L, responses.getContent().get(1).id());
-        assertEquals(7, responses.getContent().get(0).remainingQuantity());
-        assertEquals(4, responses.getContent().get(1).remainingQuantity());
-        verify(dropListCacheMetrics).recordRequest();
-        verify(dropListLocalFallback).remember(cachedPage);
-        verify(dropListCacheLoader, never()).search(any(), any());
-    }
-
-    @Test
-    @DisplayName("성능 측정에서 Redis 목록 캐시를 끄면 같은 목록을 DB에서 조회한다")
-    void getAllDropsWithoutListRedisCache() {
-        DropSearchCondition condition = new DropSearchCondition(null, null, null);
-        Pageable pageable = PageRequest.of(0, 20);
-        Page<DropResponse> databasePage = new PageImpl<>(List.of(), pageable, 0);
-        ReflectionTestUtils.setField(dropService, "listRedisCacheEnabled", false);
-        when(dropListCacheLoader.search(condition, pageable)).thenReturn(databasePage);
-
-        assertEquals(databasePage, dropService.getAll(condition, pageable));
-        verify(dropListCacheReader, never()).getLatestFirstPage();
-        verify(dropListStockReader, never()).getRemainingQuantities(any());
-    }
-
-    @Test
-    @DisplayName("성능 측정에서 로컬 목록 캐시를 끄면 Redis 목록을 직접 조회한다")
-    void getAllDropsWithoutLocalListCache() {
-        DropSearchCondition condition = new DropSearchCondition(null, null, null);
-        Pageable pageable = PageRequest.of(0, 20);
-        DropListCacheValue cachedPage = DropListCacheValue.from(
-                new PageImpl<>(List.of(), pageable, 0)
-        );
-        ReflectionTestUtils.setField(dropService, "listLocalCacheEnabled", false);
-        when(dropListCacheReader.getLatestFirstPage()).thenReturn(cachedPage);
-        when(dropListStockReader.getRemainingQuantities(List.of())).thenReturn(Map.of());
-
-        Page<DropResponse> responses = dropService.getAll(condition, pageable);
-
-        assertEquals(0, responses.getTotalElements());
-        verify(dropListLocalReadCache, never()).get(any());
-        verify(dropListCacheReader).getLatestFirstPage();
     }
 
     @Test
@@ -227,21 +156,15 @@ class DropServiceTest {
                 LocalDateTime.now().plusDays(2)
         );
         ReflectionTestUtils.setField(hiddenDrop, "id", 101L);
-        DropSearchCondition condition = new DropSearchCondition("Limited", null, null);
+        DropSearchCondition condition = new DropSearchCondition(null, null, null);
         Pageable pageable = PageRequest.of(0, 20);
-        Page<DropResponse> queryResult = new PageImpl<>(
-                List.of(DropResponse.from(visibleDrop)),
-                pageable,
-                1
-        );
-        when(dropListCacheLoader.search(condition, pageable)).thenReturn(queryResult);
+        when(dropRepository.searchPublicDrops(condition, pageable))
+                .thenReturn(new PageImpl<>(List.of(visibleDrop), pageable, 1));
 
         Page<DropResponse> responses = dropService.getAll(condition, pageable);
 
         assertEquals(1, responses.getTotalElements());
         assertEquals(100L, responses.getContent().get(0).id());
-        verify(dropListCacheMetrics, never()).recordRequest();
-        verify(dropListCacheReader, never()).getLatestFirstPage();
     }
 
     @Test

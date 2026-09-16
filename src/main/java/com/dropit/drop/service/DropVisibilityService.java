@@ -2,7 +2,6 @@ package com.dropit.drop.service;
 
 import com.dropit.drop.cache.DropSaleCacheWriter;
 import com.dropit.drop.cache.DropSaleSnapshot;
-import com.dropit.drop.cache.DropListLocalReadCache;
 import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
@@ -14,7 +13,6 @@ import com.dropit.order.repository.DropUserPurchaseRepository;
 import com.dropit.order.repository.OrderItemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -30,26 +28,13 @@ public class DropVisibilityService {
     private final DropUserPurchaseRepository purchaseRepository;
     private final DropSaleCacheWriter cacheWriter;
     private final TransactionTemplate transactionTemplate;
-    private final DropListLocalReadCache dropListLocalReadCache;
 
-    @Caching(evict = {
-            @CacheEvict(
-                    cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE,
-                    key = "#dropId",
-                    beforeInvocation = true
-            ),
-            @CacheEvict(
-                    cacheNames = RedisCacheConfig.DROP_LIST_CACHE,
-                    allEntries = true,
-                    beforeInvocation = true
-            )
-    })
+    @CacheEvict(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId", beforeInvocation = true)
     public DropResponse changeVisibility(Long sellerId, Long dropId, DropVisibilityUpdateRequest request) {
         ChangeResult result = transactionTemplate.execute(status -> changeInTransaction(sellerId, dropId, request));
         if (result == null) {
             throw new ServiceException(DropErrorCode.DROP_ADMISSION_NOT_READY);
         }
-        dropListLocalReadCache.invalidate();
         try {
             cacheWriter.apply(result.snapshot());
         } catch (RuntimeException exception) {

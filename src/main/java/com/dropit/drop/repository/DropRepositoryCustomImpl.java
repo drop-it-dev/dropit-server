@@ -5,7 +5,6 @@ import com.dropit.drop.dto.request.DropSortType;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.entity.DropStatus;
 import com.querydsl.core.types.OrderSpecifier;
-import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.querydsl.jpa.impl.JPAQuery;
@@ -16,8 +15,6 @@ import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.HashMap;
-import java.util.Map;
 
 import static com.dropit.drop.entity.QDrop.drop;
 import static com.dropit.product.entity.QProduct.product;
@@ -81,30 +78,6 @@ public class DropRepositoryCustomImpl implements DropRepositoryCustom {
                 pageable,
                 total != null ? total : 0L
         );
-    }
-
-    @Override
-    public Map<Long, Integer> findRemainingQuantitiesByIds(List<Long> dropIds) {
-        if (dropIds.isEmpty()) {
-            return Map.of();
-        }
-
-        List<Tuple> rows = queryFactory
-                .select(drop.id, drop.remainingQuantity)
-                .from(drop)
-                .where(drop.id.in(dropIds))
-                .fetch();
-
-        Map<Long, Integer> remainingQuantities = new HashMap<>();
-        for (Tuple row : rows) {
-            Long dropId = row.get(drop.id);
-            Integer remainingQuantity = row.get(drop.remainingQuantity);
-            if (dropId != null && remainingQuantity != null) {
-                remainingQuantities.put(dropId, remainingQuantity);
-            }
-        }
-
-        return remainingQuantities;
     }
 
     private BooleanExpression keywordContains(String keyword) {

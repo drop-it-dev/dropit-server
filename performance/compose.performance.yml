@@ -30,23 +30,8 @@ services:
     depends_on:
       influxdb:
         condition: service_healthy
-      prometheus:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
-  prometheus:
-    image: prom/prometheus:v3.5.0
-    ports:
-      - "127.0.0.1:9090:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -72,4 +57,3 @@ services:
 volumes:
   influxdb-data:
   grafana-data:
-  prometheus-data:
