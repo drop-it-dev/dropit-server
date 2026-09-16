@@ -52,26 +52,38 @@ public class SellerRankingQueryStore {
             throw new ServiceException(RankingErrorCode.RANKING_UNAVAILABLE);
         }
 
-        UUID version = UUID.fromString(text(result.get(1)));
-        Instant asOf = Instant.parse(text(result.get(2)));
-        Instant publishedAt = Instant.parse(text(result.get(3)));
-        YearMonth month = YearMonth.parse(text(result.get(4)));
-        int itemCount = Integer.parseInt(text(result.get(5)));
-        var rankings = new ArrayList<SellerRankingEntryResponse>(itemCount);
-        int index = 6;
-        for (int rank = 1; rank <= itemCount; rank++) {
-            rankings.add(new SellerRankingEntryResponse(rank,
-                    Long.parseLong(text(result.get(index++))), quantity(result.get(index++))));
+        try {
+            if (result.size() < 6) {
+                throw new IndexOutOfBoundsException("Incomplete seller ranking response");
+            }
+            int itemCount = Integer.parseInt(text(result.get(5)));
+            long expectedLength = 8L + 2L * itemCount;
+            if (itemCount < 0 || result.size() != expectedLength) {
+                throw new IndexOutOfBoundsException("Invalid seller ranking response length");
+            }
+
+            UUID version = UUID.fromString(text(result.get(1)));
+            Instant asOf = Instant.parse(text(result.get(2)));
+            Instant publishedAt = Instant.parse(text(result.get(3)));
+            YearMonth month = YearMonth.parse(text(result.get(4)));
+            var rankings = new ArrayList<SellerRankingEntryResponse>(itemCount);
+            int index = 6;
+            for (int rank = 1; rank <= itemCount; rank++) {
+                rankings.add(new SellerRankingEntryResponse(rank,
+                        Long.parseLong(text(result.get(index++))), quantity(result.get(index++))));
+            }
+            SellerRankingEntryResponse requestedSeller = null;
+            if (sellerId != null && !"".equals(text(result.get(index)))) {
+                requestedSeller = new SellerRankingEntryResponse(
+                        Long.parseLong(text(result.get(index))) + 1,
+                        sellerId,
+                        quantity(result.get(index + 1)));
+            }
+            return new SellerRankingResponse(version, range, month, asOf, publishedAt,
+                    List.copyOf(rankings), requestedSeller);
+        } catch (RuntimeException exception) {
+            throw new ServiceException(RankingErrorCode.RANKING_UNAVAILABLE, exception);
         }
-        SellerRankingEntryResponse requestedSeller = null;
-        if (sellerId != null && !"".equals(text(result.get(index)))) {
-            requestedSeller = new SellerRankingEntryResponse(
-                    Long.parseLong(text(result.get(index))) + 1,
-                    sellerId,
-                    quantity(result.get(index + 1)));
-        }
-        return new SellerRankingResponse(version, range, month, asOf, publishedAt,
-                List.copyOf(rankings), requestedSeller);
     }
 
     private static long quantity(Object value) {
