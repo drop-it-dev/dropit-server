@@ -27,6 +27,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.mock.web.MockMultipartFile;
+import com.dropit.global.storage.ImageUploadResult;
 
 import java.util.List;
 import java.util.Optional;
@@ -330,9 +331,20 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(s3ImageService.upload(file, "products/100"))
-                .thenReturn("products/100/new.png");
-        when(s3ImageService.createPublicUrl("products/100/new.png"))
-                .thenReturn("https://public.example.com/new.png");
+                .thenReturn(
+                        new ImageUploadResult(
+                                "incoming/products/100/new.png",
+                                "optimized/products/100/new.webp"
+                        )
+                );
+        when(
+                s3ImageService.createPublicUrl(
+                        "optimized/products/100/new.webp"
+                )
+        ).thenReturn(
+                "https://d3czchk38dd04k.cloudfront.net/"
+                        + "optimized/products/100/new.webp"
+        );
 
         ProductResponse response = productService.uploadImage(
                 sellerId,
@@ -340,8 +352,15 @@ class ProductServiceTest {
                 file
         );
 
-        assertEquals("products/100/new.png", product.getImageUrl());
-        assertEquals("https://public.example.com/new.png", response.getImageUrl());
+        assertEquals(
+                "optimized/products/100/new.webp",
+                product.getImageUrl()
+        );
+        assertEquals(
+                "https://d3czchk38dd04k.cloudfront.net/"
+                        + "optimized/products/100/new.webp",
+                response.getImageUrl()
+        );
         verify(s3ImageService).upload(file, "products/100");
     }
 
