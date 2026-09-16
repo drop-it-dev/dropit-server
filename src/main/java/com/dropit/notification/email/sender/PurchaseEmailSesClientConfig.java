@@ -12,6 +12,8 @@ public class PurchaseEmailSesClientConfig {
 
     static final long MAX_API_CALL_TIMEOUT_MILLIS = 20_000;
     static final long MAX_API_CALL_ATTEMPT_TIMEOUT_MILLIS = 5_000;
+    // Covers the three-attempt markSent path and the following manual acknowledgement.
+    static final long POST_SEND_PROCESSING_BUDGET_MILLIS = 5_000;
 
     @Bean
     SesClientCustomizer purchaseEmailSesClientCustomizer(
@@ -60,10 +62,15 @@ public class PurchaseEmailSesClientConfig {
                             + "must not exceed api-call-timeout-millis"
             );
         }
-        if (apiCallTimeoutMillis >= visibilityTimeoutMillis) {
+        long requiredVisibilityTimeoutMillis = Math.addExact(
+                apiCallTimeoutMillis,
+                POST_SEND_PROCESSING_BUDGET_MILLIS
+        );
+        if (requiredVisibilityTimeoutMillis >= visibilityTimeoutMillis) {
             throw new IllegalArgumentException(
-                    "app.notification.email.ses.api-call-timeout-millis must be shorter "
-                            + "than app.notification.email.sqs.consumer-visibility-timeout-seconds"
+                    "app.notification.email.sqs.consumer-visibility-timeout-seconds must leave "
+                            + "time after the SES api-call-timeout-millis for markSent retries "
+                            + "and manual acknowledgement"
             );
         }
     }

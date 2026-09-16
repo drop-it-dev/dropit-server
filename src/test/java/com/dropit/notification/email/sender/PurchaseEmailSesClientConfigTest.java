@@ -66,6 +66,24 @@ class PurchaseEmailSesClientConfigTest {
                 .hasMessageContaining("consumer-visibility-timeout-seconds");
     }
 
+    @Test
+    void visibility_timeout은_SES호출후_SENT저장과_ACK시간을_남겨야_한다() {
+        EmailSesProperties properties = new EmailSesProperties(
+                "no-reply@dropit.example",
+                20_000,
+                5_000
+        );
+
+        assertThatThrownBy(() -> config.purchaseEmailSesClientCustomizer(
+                properties,
+                sqsProperties(21)
+        ))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("consumer-visibility-timeout-seconds")
+                .hasMessageContaining("markSent retries")
+                .hasMessageContaining("manual acknowledgement");
+    }
+
     private EmailSqsProperties sqsProperties(int visibilityTimeoutSeconds) {
         return new EmailSqsProperties(
                 "queue-url",
