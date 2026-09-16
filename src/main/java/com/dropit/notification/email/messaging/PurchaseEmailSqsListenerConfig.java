@@ -3,6 +3,7 @@ package com.dropit.notification.email.messaging;
 import io.awspring.cloud.sqs.config.SqsMessageListenerContainerFactory;
 import io.awspring.cloud.sqs.listener.QueueNotFoundStrategy;
 import io.awspring.cloud.sqs.listener.acknowledgement.handler.AcknowledgementMode;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,16 @@ import java.time.Duration;
         havingValue = "true"
 )
 public class PurchaseEmailSqsListenerConfig {
+
+    @Bean(name = "defaultSqsListenerContainerFactory")
+    @ConditionalOnMissingBean(name = "defaultSqsListenerContainerFactory")
+    SqsMessageListenerContainerFactory<Object> defaultSqsListenerContainerFactory(
+            SqsAsyncClient sqsAsyncClient
+    ) {
+        return SqsMessageListenerContainerFactory.builder()
+                .sqsAsyncClient(sqsAsyncClient)
+                .build();
+    }
 
     @Bean
     SqsMessageListenerContainerFactory<Object> purchaseEmailSqsListenerContainerFactory(

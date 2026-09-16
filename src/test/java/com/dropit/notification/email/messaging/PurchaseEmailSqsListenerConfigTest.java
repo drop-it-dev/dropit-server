@@ -1,10 +1,12 @@
 package com.dropit.notification.email.messaging;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
 
 import java.util.stream.Stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -14,6 +16,12 @@ class PurchaseEmailSqsListenerConfigTest {
     private final PurchaseEmailSqsListenerConfig config =
             new PurchaseEmailSqsListenerConfig();
     private final SqsAsyncClient sqsClient = mock(SqsAsyncClient.class);
+
+    @Test
+    @DisplayName("기존 SQS Listener가 사용할 기본 Factory도 제공한다")
+    void createsDefaultListenerContainerFactory() {
+        assertThat(config.defaultSqsListenerContainerFactory(sqsClient)).isNotNull();
+    }
 
     @Test
     void 유효한_수신_설정으로_Listener_Container를_생성한다() {
