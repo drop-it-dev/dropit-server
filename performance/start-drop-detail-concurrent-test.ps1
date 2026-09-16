@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('Before', 'After', 'Optimized')]
+    [ValidateSet('Before', 'After', 'Optimized', 'LiveStock')]
     [string]$Phase,
 
     [Parameter(Mandatory = $true)]
@@ -13,7 +13,10 @@ param(
     [ValidateSet('Warm', 'Cold')]
     [string]$CacheMode = 'Warm',
 
-    [string]$TargetBaseUrl
+    [string]$TargetBaseUrl,
+
+    [ValidateRange(0, [int]::MaxValue)]
+    [int]$StockQuantity = 100
 )
 
 $ErrorActionPreference = 'Stop'
@@ -128,6 +131,16 @@ if (-not $authToken) {
     throw 'Access token was not returned by the login API.'
 }
 
+$redisContainer = docker ps --filter 'name=redis' --format '{{.Names}}' | Select-Object -First 1
+if (-not $redisContainer) {
+    throw 'Redis container is not running.'
+}
+
+docker exec $redisContainer redis-cli SET "{drop:$DropId}:stock" $StockQuantity | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw 'The Drop stock key could not be prepared.'
+}
+
 try {
     $dropResponse = Invoke-RestMethod `
         -Uri "$healthCheckUrl/drops/$DropId" `
@@ -142,12 +155,6 @@ try {
 }
 
 if ($CacheMode -eq 'Cold') {
-    $redisContainer = docker ps --filter 'name=redis' --format '{{.Names}}' | Select-Object -First 1
-
-    if (-not $redisContainer) {
-        throw 'Redis container is not running.'
-    }
-
     docker exec $redisContainer redis-cli DEL "dropit::dropDetail::$DropId" | Out-Null
 
     if ($LASTEXITCODE -ne 0) {

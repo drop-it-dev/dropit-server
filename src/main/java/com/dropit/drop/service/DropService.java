@@ -1,12 +1,5 @@
 package com.dropit.drop.service;
 
-import com.dropit.drop.cache.DropListCacheLoader;
-import com.dropit.drop.cache.DropListCacheMetrics;
-import com.dropit.drop.cache.DropListLocalFallback;
-import com.dropit.drop.cache.DropListLocalReadCache;
-import com.dropit.drop.cache.DropListCacheReader;
-import com.dropit.drop.cache.DropListCacheValue;
-import com.dropit.drop.cache.DropListStockReader;
 import com.dropit.drop.dto.request.DropCreateRequest;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropSortType;
@@ -15,6 +8,7 @@ import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
 import com.dropit.drop.exception.DropErrorCode;
 import com.dropit.drop.repository.DropRepository;
+import com.dropit.drop.repository.DropLiveState;
 import com.dropit.global.config.RedisCacheConfig;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.product.entity.Product;
@@ -23,7 +17,6 @@ import com.dropit.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,18 +33,6 @@ public class DropService {
 
     private final DropRepository dropRepository;
     private final ProductRepository productRepository;
-    private final DropListCacheReader dropListCacheReader;
-    private final DropListCacheLoader dropListCacheLoader;
-    private final DropListStockReader dropListStockReader;
-    private final DropListCacheMetrics dropListCacheMetrics;
-    private final DropListLocalFallback dropListLocalFallback;
-    private final DropListLocalReadCache dropListLocalReadCache;
-
-    @Value("${app.drop.list.redis-cache.enabled:true}")
-    private boolean listRedisCacheEnabled = true;
-
-    @Value("${app.drop.list.local-cache.enabled:true}")
-    private boolean listLocalCacheEnabled = true;
 
     @Transactional
     @CacheEvict(
@@ -125,16 +106,21 @@ public class DropService {
                 && pageable.getSort().isUnsorted();
     }
 
-    @Cacheable(cacheNames = RedisCacheConfig.DROP_DETAIL_CACHE, key = "#dropId", sync = true)
     public DropResponse getOne(Long dropId) {
-        Drop drop = dropRepository.findDetailById(dropId)
+        DropDetailCacheValue detail = dropDetailCacheReader.get(dropId);
+        DropLiveState liveState = dropRepository.findLiveStateById(dropId)
                 .orElseThrow(() -> new ServiceException(DropErrorCode.DROP_NOT_FOUND));
 
-        if (!drop.isVisible()) {
+        if (!liveState.isVisible()) {
             throw new ServiceException(DropErrorCode.DROP_NOT_FOUND);
         }
 
-        return DropResponse.from(drop);
+        return DropResponse.from(
+                detail,
+                liveState.getRemainingQuantity(),
+                liveState.isVisible(),
+                LocalDateTime.now()
+        );
     }
 
     @Transactional(readOnly = true)

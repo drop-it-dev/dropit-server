@@ -1,22 +1,12 @@
 package com.dropit.drop.service;
 
-import com.dropit.drop.cache.DropListCacheLoader;
-import com.dropit.drop.cache.CacheReadFailureContext;
-import com.dropit.drop.cache.DropListCacheMetrics;
-import com.dropit.drop.cache.DropListCacheReader;
-import com.dropit.drop.cache.DropListCacheValue;
-import com.dropit.drop.cache.DropListStockReader;
-import com.dropit.drop.cache.DropListStockDbFallbackCache;
-import com.dropit.drop.cache.DropListLocalFallback;
-import com.dropit.drop.cache.DropListLocalReadCache;
-import com.dropit.drop.cache.RedisCacheCircuitBreaker;
-import com.dropit.drop.cache.RedisStockCircuitBreaker;
 import com.dropit.drop.cache.DropSaleCacheWriter;
 import com.dropit.drop.dto.request.DropSearchCondition;
 import com.dropit.drop.dto.request.DropUpdateRequest;
 import com.dropit.drop.dto.request.DropVisibilityUpdateRequest;
 import com.dropit.drop.dto.response.DropResponse;
 import com.dropit.drop.entity.Drop;
+import com.dropit.drop.repository.DropLiveState;
 import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.config.RedisCacheConfig;
 import com.dropit.global.exception.ServiceException;
@@ -71,22 +61,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringJUnitConfig
-@Import({
-        DropService.class,
-        DropVisibilityService.class,
-        DropListCacheReader.class,
-        DropListCacheLoader.class,
-        DropListStockReader.class,
-        DropListStockDbFallbackCache.class,
-        DropListLocalFallback.class,
-        DropListLocalReadCache.class,
-        CacheReadFailureContext.class,
-        RedisCacheCircuitBreaker.class,
-        RedisStockCircuitBreaker.class,
-        ProductService.class,
-        RedisCacheConfig.class,
-        DropCacheIntegrationTest.RedisTestConfig.class
-})
+@Import({DropService.class, DropVisibilityService.class, RedisCacheConfig.class, DropCacheIntegrationTest.RedisTestConfig.class})
 class DropCacheIntegrationTest {
 
     private static final GenericContainer<?> REDIS = new GenericContainer<>(
@@ -166,13 +141,34 @@ class DropCacheIntegrationTest {
     void repeatedDetailRequestUsesRedisCache() {
         Drop drop = visibleDrop();
         when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(drop));
+        when(dropRepository.findLiveStateById(100L)).thenReturn(Optional.of(liveState(100, true)));
 
         DropResponse first = dropService.getOne(100L);
         DropResponse second = dropService.getOne(100L);
 
         assertEquals(first, second);
         verify(dropRepository, times(1)).findDetailById(100L);
-        assertNotNull(dropDetailCache.get(100L, DropResponse.class));
+        verify(dropRepository, times(2)).findLiveStateById(100L);
+        assertNotNull(dropDetailCache.get(100L, DropDetailCacheValue.class));
+    }
+
+    @Test
+    void changedDatabaseStockIsReflectedWithoutReloadingMetadata() {
+        Drop drop = visibleDrop();
+        when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(drop));
+        when(dropRepository.findLiveStateById(100L)).thenReturn(
+                Optional.of(liveState(100, true)),
+                Optional.of(liveState(97, true))
+        );
+
+        DropResponse first = dropService.getOne(100L);
+        DropResponse second = dropService.getOne(100L);
+
+        assertEquals(100, first.remainingQuantity());
+        assertEquals(97, second.remainingQuantity());
+        assertEquals(3, second.soldQuantity());
+        verify(dropRepository, times(1)).findDetailById(100L);
+        verify(dropRepository, times(2)).findLiveStateById(100L);
     }
 
     @Test
@@ -180,6 +176,7 @@ class DropCacheIntegrationTest {
         Drop drop = visibleDrop();
         when(dropRepository.findDetailById(100L)).thenReturn(Optional.of(drop));
         when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
+        when(dropRepository.findLiveStateById(100L)).thenReturn(Optional.of(liveState(100, true)));
         dropService.getOne(100L);
 
         dropVisibilityService.changeVisibility(1L, 100L, new DropVisibilityUpdateRequest(false));
@@ -194,6 +191,7 @@ class DropCacheIntegrationTest {
         when(dropRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(drop));
         doThrow(new IllegalStateException("Redis unavailable"))
                 .when(dropSaleCacheWriter).apply(any());
+        when(dropRepository.findLiveStateById(100L)).thenReturn(Optional.of(liveState(100, true)));
         dropService.getOne(100L);
 
         assertThrows(ServiceException.class, () ->
@@ -302,6 +300,20 @@ class DropCacheIntegrationTest {
         drop.changeVisibility(true);
         ReflectionTestUtils.setField(drop, "id", 100L);
         return drop;
+    }
+
+    private DropLiveState liveState(int remainingQuantity, boolean visible) {
+        return new DropLiveState() {
+            @Override
+            public int getRemainingQuantity() {
+                return remainingQuantity;
+            }
+
+            @Override
+            public boolean isVisible() {
+                return visible;
+            }
+        };
     }
 
     @TestConfiguration(proxyBeanMethods = false)

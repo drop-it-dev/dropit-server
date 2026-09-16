@@ -90,4 +90,26 @@ class DropSearchIntegrationTest {
         assertEquals(expected, actual.getContent().stream().map(Drop::getId).toList());
         assertEquals(count.longValue(), actual.getTotalElements());
     }
+
+    @Test
+    void liveStateReadsCommittedStockAndVisibility() {
+        String marker = "live-state-" + UUID.randomUUID();
+        User seller = new User(marker + "@test.invalid", "unused", marker, UserRole.SELLER);
+        em.persist(seller);
+        Product product = new Product(seller, marker, "fixture", null);
+        em.persist(product);
+        LocalDateTime now = LocalDateTime.now();
+        Drop drop = new Drop(product, BigDecimal.valueOf(100), 10, 0, 1,
+                now.minusDays(1), now.plusDays(1));
+        drop.changeVisibility(true);
+        drop.decreaseStock(3, now);
+        em.persist(drop);
+        em.flush();
+        em.clear();
+
+        DropLiveState result = repository.findLiveStateById(drop.getId()).orElseThrow();
+
+        assertEquals(7, result.getRemainingQuantity());
+        assertTrue(result.isVisible());
+    }
 }

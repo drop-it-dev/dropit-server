@@ -88,12 +88,7 @@ public class Drop extends BaseEntity {
     }
 
     public DropStatus currentStatus(LocalDateTime now) {
-        if (!now.isBefore(closeAt))  return DropStatus.CLOSED;
-        if (now.isBefore(openAt)) return DropStatus.READY;
-        if (remainingQuantity == 0) return DropStatus.SOLDOUT;
-
-        // openAt <= now < closeAt
-        return DropStatus.OPEN;
+        return DropStatus.resolve(openAt, closeAt, remainingQuantity, now);
     }
 
     public void update(

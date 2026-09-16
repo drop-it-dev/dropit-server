@@ -64,6 +64,10 @@ class S3ImageServiceTest {
         );
         assertEquals(keyCaptor.getValue(), key);
         assertEquals("image/png", metadataCaptor.getValue().getContentType());
+        assertEquals(
+                "public, max-age=31536000, immutable",
+                metadataCaptor.getValue().getCacheControl()
+        );
         assertTrue(key.matches("products/100/[\\w-]+\\.png"));
     }
 
@@ -109,19 +113,25 @@ class S3ImageServiceTest {
     }
 
     @Test
-    @DisplayName("이미지 키를 공개 S3 URL로 변환한다")
+    @DisplayName("이미지 키를 CloudFront CDN URL로 변환한다")
     void createPublicUrl() throws Exception {
-        String key = "products/100/image.png";
-        URL publicUrl = new URL(
-                "https://dropit-test.s3.ap-northeast-2.amazonaws.com/products/100/image.png"
+        ReflectionTestUtils.setField(
+                s3ImageService,
+                "cdnDomain",
+                "d3czchk38dd04k.cloudfront.net"
         );
-        S3Resource resource = org.mockito.Mockito.mock(S3Resource.class);
-        when(s3Template.createResource(BUCKET, key)).thenReturn(resource);
-        when(resource.getURL()).thenReturn(publicUrl);
 
-        assertEquals(publicUrl.toString(), s3ImageService.createPublicUrl(key));
-        assertNull(s3ImageService.createPublicUrl(null));
-        verify(s3Template).createResource(BUCKET, key);
+        String key =
+                "products/100/image.png";
+
+        assertEquals(
+                "https://d3czchk38dd04k.cloudfront.net/products/100/image.png",
+                s3ImageService.createPublicUrl(key)
+        );
+
+        assertNull(
+                s3ImageService.createPublicUrl(null)
+        );
     }
 
     private void assertErrorCode(
