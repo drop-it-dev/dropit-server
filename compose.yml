@@ -31,6 +31,27 @@ services:
       timeout: 3s
       retries: 10
 
+  localstack:
+    image: localstack/localstack:4.14.0
+    profiles: [ "local-aws" ]
+    environment:
+      AWS_DEFAULT_REGION: ap-northeast-2
+      SERVICES: sqs,ses
+      PERSISTENCE: "1"
+      SQS_ENDPOINT_STRATEGY: path
+    ports:
+      - "127.0.0.1:4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - ./localstack/init:/etc/localstack/init/ready.d
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fs http://localhost:4566/_localstack/health" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
 volumes:
   mysql-data:
   redis-data:
+  localstack-data:

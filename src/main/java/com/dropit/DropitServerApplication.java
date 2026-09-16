@@ -2,6 +2,7 @@ package com.dropit;
 
 import com.dropit.global.security.jwt.JwtProperties;
 import com.dropit.notification.email.messaging.EmailSqsProperties;
+import com.dropit.notification.email.sender.EmailSesProperties;
 import com.dropit.order.messaging.SqsProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,7 +16,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties({
         JwtProperties.class,
         SqsProperties.class,
-        EmailSqsProperties.class
+        EmailSqsProperties.class,
+        EmailSesProperties.class
 })
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 public class DropitServerApplication {

@@ -37,6 +37,7 @@ dependencies {
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-ses'
     implementation 'software.amazon.awssdk:url-connection-client'
 
     implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
@@ -174,6 +175,20 @@ tasks.register('dbDown', Exec) {
     group = 'development'
     description = '로컬 DB 컨테이너를 종료합니다.'
     commandLine 'docker', 'compose', '--env-file', '.env.local', 'down'
+}
+
+tasks.register('localAwsUp', Exec) {
+    group = 'development'
+    description = 'AWS 권한 없이 SQS와 SES를 테스트할 LocalStack을 실행합니다.'
+    commandLine 'docker', 'compose', '--env-file', '.env.local',
+            '--profile', 'local-aws', 'up', '-d', '--wait', 'localstack'
+}
+
+tasks.register('localAwsDown', Exec) {
+    group = 'development'
+    description = 'LocalStack 컨테이너를 종료합니다.'
+    commandLine 'docker', 'compose', '--env-file', '.env.local',
+            '--profile', 'local-aws', 'stop', 'localstack'
 }
 
 def performanceComposeFile = file('performance/compose.performance.yml')
