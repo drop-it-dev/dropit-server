@@ -145,6 +145,15 @@ class ProductDocumentationTest extends DocumentationTestSupport {
                         requestParts(partWithName("file").description("업로드할 이미지 파일"))));
     }
 
+    @Test
+    void deleteImage() throws Exception {
+        mockMvc.perform(authenticated(delete("/products/{productId}/image", 100L)))
+                .andExpect(status().isNoContent())
+                .andDo(document("products-delete-image", resource(builder()
+                        .tag("Products").summary("상품 이미지 삭제").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("productId").description("상품 ID")).build())));
+    }
+
     private ProductResponse productResponse() {
         User seller = new User("seller@example.com", "encoded-password", "seller", UserRole.SELLER);
         ReflectionTestUtils.setField(seller, "id", 1L);

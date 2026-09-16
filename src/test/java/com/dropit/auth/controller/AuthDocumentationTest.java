@@ -88,4 +88,13 @@ class AuthDocumentationTest extends DocumentationTestSupport {
                                 fieldWithPath("refreshToken").type(STRING).description("갱신 토큰")
                         ).responseSchema(new Schema("AuthTokenResponse")).build())));
     }
+
+    @Test
+    void logout() throws Exception {
+        mockMvc.perform(authenticated(post("/auth/logout")))
+                .andExpect(status().isNoContent())
+                .andDo(document("auth-logout", resource(builder()
+                        .tag("Auth").summary("로그아웃").description("현재 인증 정보를 종료합니다.")
+                        .requestHeaders(authorizationHeader()).build())));
+    }
 }
