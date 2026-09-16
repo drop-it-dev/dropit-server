@@ -1,0 +1,45 @@
+{
+  "uid": "drop-list-opening-4000-snapshot",
+  "title": "Drop 목록 | 4,000명 Grafana 실측 숫자",
+  "description": "막대그래프 없이 저장된 k6 원본 요약을 InfluxDB에서 직접 조회하는 p95 숫자 화면입니다.",
+  "tags": ["drop-list", "opening-4000", "saved-k6", "snapshot"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "",
+  "time": {"from": "now-30d", "to": "now"},
+  "panels": [
+    {
+      "id": 1, "type": "text", "title": "측정 조건", "gridPos": {"x": 0, "y": 0, "w": 24, "h": 3},
+      "options": {"mode": "markdown", "content": "**같은 Drop 목록 API · 4,000명 동시 단발 조회 · Spring 2대**. 각 단계 4,000/4,000건 성공, 실패 0건. **DB 직접 조회 4,000명은 로컬 안전 기준으로 미실행.** 아래 수치는 저장된 k6 요약을 InfluxDB로 가져온 집계입니다."}
+    },
+    {
+      "id": 2, "type": "stat", "title": "1차 Redis 적용 후 · p95", "gridPos": {"x": 0, "y": 3, "w": 12, "h": 4},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 2, "color": {"mode": "fixed", "fixedColor": "green"}}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"refId": "A", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening4000' AND \"run\"='1' AND \"stage\"='Redis'"}]
+    },
+    {
+      "id": 3, "type": "stat", "title": "1차 Redis + L1 · p95 (34.91% 악화)", "gridPos": {"x": 12, "y": 3, "w": 12, "h": 4},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 2, "color": {"mode": "fixed", "fixedColor": "orange"}}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"refId": "A", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening4000' AND \"run\"='1' AND \"stage\"='Redis-L1'"}]
+    },
+    {
+      "id": 4, "type": "stat", "title": "2차 Redis 적용 후 · p95", "gridPos": {"x": 0, "y": 7, "w": 12, "h": 4},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 2, "color": {"mode": "fixed", "fixedColor": "green"}}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"refId": "A", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening4000' AND \"run\"='2' AND \"stage\"='Redis'"}]
+    },
+    {
+      "id": 5, "type": "stat", "title": "2차 Redis + L1 · p95 (45.27% 악화)", "gridPos": {"x": 12, "y": 7, "w": 12, "h": 4},
+      "datasource": {"type": "influxdb", "uid": "k6-influxdb"},
+      "fieldConfig": {"defaults": {"unit": "ms", "decimals": 2, "color": {"mode": "fixed", "fixedColor": "orange"}}, "overrides": []},
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"refId": "A", "rawQuery": true, "resultFormat": "time_series", "query": "SELECT last(\"p95_ms\") FROM \"drop_list_saved_k6\" WHERE \"scenario\"='opening4000' AND \"run\"='2' AND \"stage\"='Redis-L1'"}]
+    }
+  ]
+}
