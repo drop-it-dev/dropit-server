@@ -1,6 +1,7 @@
 package com.dropit.sellerprofile.service;
 
 import com.dropit.global.exception.ServiceException;
+import com.dropit.global.storage.ImageUploadResult;
 import com.dropit.global.storage.S3ImageService;
 import com.dropit.sellerprofile.dto.request.SellerProfileCreateRequest;
 import com.dropit.sellerprofile.dto.request.SellerProfileUpdateRequest;
@@ -177,20 +178,23 @@ class SellerProfileServiceTest {
         when(sellerProfileRepository.findByUser_Id(userId))
                 .thenReturn(Optional.of(profile));
         when(s3ImageService.upload(file, "seller-profiles/1"))
-                .thenReturn("seller-profiles/1/new.png");
+                .thenReturn(new ImageUploadResult(
+                        "seller-profiles/1/new.png",
+                        "seller-profiles/1/new.webp"
+                ));
         when(
                 s3ImageService.createPublicUrl(
-                        "seller-profiles/1/new.png"
+                        "seller-profiles/1/new.webp"
                 )
         ).thenReturn(
-                "https://d3czchk38dd04k.cloudfront.net/seller-profiles/1/new.png"
+                "https://d3czchk38dd04k.cloudfront.net/seller-profiles/1/new.webp"
         );
 
         SellerProfileResponse response = sellerProfileService.uploadImage(userId, file);
 
-        assertEquals("seller-profiles/1/new.png", profile.getImageUrl());
+        assertEquals("seller-profiles/1/new.webp", profile.getImageUrl());
         assertEquals(
-                "https://d3czchk38dd04k.cloudfront.net/seller-profiles/1/new.png",
+                "https://d3czchk38dd04k.cloudfront.net/seller-profiles/1/new.webp",
                 response.imageUrl()
         );
         verify(s3ImageService).upload(file, "seller-profiles/1");
