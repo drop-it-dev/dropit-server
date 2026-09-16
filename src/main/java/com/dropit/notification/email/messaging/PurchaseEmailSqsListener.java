@@ -9,8 +9,10 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(
-        prefix = "app.notification.email.sqs",
-        name = "consumer-enabled",
+        name = {
+                "app.worker.enabled",
+                "app.notification.email.sqs.consumer-enabled"
+        },
         havingValue = "true"
 )
 public class PurchaseEmailSqsListener {
