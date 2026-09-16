@@ -68,6 +68,7 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    systemProperty 'test.runtime-classpath', sourceSets.test.runtimeClasspath.asPath
     outputs.dir(file('build/generated-snippets'))
 }
 
