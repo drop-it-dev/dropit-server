@@ -73,6 +73,16 @@ tasks.named('test') {
     outputs.dir(file('build/generated-snippets'))
 }
 
+def cleanRestDocsSnippets = tasks.register('cleanRestDocsSnippets', Delete) {
+    group = 'documentation'
+    description = 'OpenAPI 생성 전에 이전 REST Docs 스니펫을 삭제합니다.'
+    delete(layout.buildDirectory.dir('generated-snippets'))
+}
+
+tasks.named('test') {
+    mustRunAfter(cleanRestDocsSnippets)
+}
+
 openapi3 {
     server = '/'
     title = 'DROPIT API'
@@ -84,6 +94,7 @@ openapi3 {
 
 afterEvaluate {
     tasks.named('openapi3') {
+        dependsOn(cleanRestDocsSnippets)
         dependsOn(tasks.named('test'))
         doLast {
             File specFile = layout.buildDirectory.file('api-spec/openapi3.yaml').get().asFile
