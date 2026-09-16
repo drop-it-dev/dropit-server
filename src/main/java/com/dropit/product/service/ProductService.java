@@ -1,9 +1,11 @@
 package com.dropit.product.service;
 
-import com.dropit.drop.repository.DropRepository;
+
 import com.dropit.drop.cache.DropListLocalReadCache;
+import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.config.RedisCacheConfig;
 import com.dropit.global.exception.ServiceException;
+import com.dropit.global.storage.ImageUploadResult;
 import com.dropit.global.storage.S3ImageService;
 import com.dropit.product.dto.request.ProductCreateRequest;
 import com.dropit.product.dto.request.ProductUpdateRequest;
@@ -115,12 +117,12 @@ public class ProductService {
     ) {
         Product product = findOwnedProduct(sellerId, productId);
 
+        dropListLocalReadCache.invalidate();
+
         product.updateInfo(
                 request.getName(),
                 request.getDescription()
         );
-
-        dropListLocalReadCache.invalidate();
 
         return toResponse(product);
     }
@@ -136,27 +138,28 @@ public class ProductService {
             Long productId,
             MultipartFile file
     ) {
-        /*
-         * Check ownership before uploading anything to S3.
-         */
         Product product = findOwnedProduct(sellerId, productId);
 
-        String oldKey = product.getImageUrl();
+        String oldOptimizedKey = product.getImageUrl();
 
-        String newKey = s3ImageService.upload(
+        ImageUploadResult uploadResult = s3ImageService.upload(
                 file,
                 "products/" + productId
         );
 
-        product.changeImage(newKey);
+        /*
+         * Store the future WebP key, not the temporary original key.
+         */
+        product.changeImage(uploadResult.optimizedKey());
 
         dropListLocalReadCache.invalidate();
 
-        synchronizeImageReplacement(oldKey, newKey);
+        synchronizeImageReplacement(
+                oldOptimizedKey,
+                uploadResult.sourceKey(),
+                uploadResult.optimizedKey()
+        );
 
-        /*
-         * This method handles one product, so return one ProductResponse.
-         */
         return toResponse(product);
     }
 
@@ -247,8 +250,9 @@ public class ProductService {
     }
 
     private void synchronizeImageReplacement(
-            String oldKey,
-            String newKey
+            String oldOptimizedKey,
+            String newSourceKey,
+            String newOptimizedKey
     ) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             return;
@@ -259,13 +263,22 @@ public class ProductService {
 
                     @Override
                     public void afterCommit() {
-                        s3ImageService.deleteQuietly(oldKey);
+                        /*
+                         * The DB now references the new optimized image,
+                         * so the previous optimized image can be removed.
+                         */
+                        s3ImageService.deleteQuietly(oldOptimizedKey);
                     }
 
                     @Override
                     public void afterCompletion(int status) {
                         if (status != STATUS_COMMITTED) {
-                            s3ImageService.deleteQuietly(newKey);
+                            /*
+                             * The DB transaction failed. Clean up both
+                             * possible objects belonging to the failed upload.
+                             */
+                            s3ImageService.deleteQuietly(newSourceKey);
+                            s3ImageService.deleteQuietly(newOptimizedKey);
                         }
                     }
                 }
