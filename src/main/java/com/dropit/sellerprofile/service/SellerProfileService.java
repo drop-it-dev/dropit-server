@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
+import com.dropit.global.storage.ImageUploadResult;
 
 @Service
 @RequiredArgsConstructor
@@ -117,16 +118,20 @@ public class SellerProfileService {
             );
         }
 
-        String oldKey = sellerProfile.getImageUrl();
+        String oldOptimizedKey = sellerProfile.getImageUrl();
 
-        String newKey = s3ImageService.upload(
+        ImageUploadResult uploadResult = s3ImageService.upload(
                 file,
                 "seller-profiles/" + userId
         );
 
-        sellerProfile.changeImage(newKey);
+        sellerProfile.changeImage(uploadResult.optimizedKey());
 
-        synchronizeImageReplacement(oldKey, newKey);
+        synchronizeImageReplacement(
+                oldOptimizedKey,
+                uploadResult.sourceKey(),
+                uploadResult.optimizedKey()
+        );
 
         return toResponse(sellerProfile);
     }
@@ -186,15 +191,10 @@ public class SellerProfileService {
         );
     }
 
-    /*
-     * Delete the old image only if the database transaction succeeds.
-     *
-     * If the database transaction fails, delete the newly uploaded image
-     * because the database will still reference the old image.
-     */
     private void synchronizeImageReplacement(
-            String oldKey,
-            String newKey
+            String oldOptimizedKey,
+            String newSourceKey,
+            String newOptimizedKey
     ) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             return;
@@ -205,13 +205,14 @@ public class SellerProfileService {
 
                     @Override
                     public void afterCommit() {
-                        s3ImageService.deleteQuietly(oldKey);
+                        s3ImageService.deleteQuietly(oldOptimizedKey);
                     }
 
                     @Override
                     public void afterCompletion(int status) {
-                        if (status != TransactionSynchronization.STATUS_COMMITTED) {
-                            s3ImageService.deleteQuietly(newKey);
+                        if (status != STATUS_COMMITTED) {
+                            s3ImageService.deleteQuietly(newSourceKey);
+                            s3ImageService.deleteQuietly(newOptimizedKey);
                         }
                     }
                 }

@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
+import com.dropit.global.storage.ImageUploadResult;
 
 @Service
 @RequiredArgsConstructor
@@ -115,12 +116,12 @@ public class ProductService {
     ) {
         Product product = findOwnedProduct(sellerId, productId);
 
+        dropListLocalReadCache.invalidate();
+
         product.updateInfo(
                 request.getName(),
                 request.getDescription()
         );
-
-        dropListLocalReadCache.invalidate();
 
         return toResponse(product);
     }
@@ -136,27 +137,28 @@ public class ProductService {
             Long productId,
             MultipartFile file
     ) {
-        /*
-         * Check ownership before uploading anything to S3.
-         */
         Product product = findOwnedProduct(sellerId, productId);
 
-        String oldKey = product.getImageUrl();
+        String oldOptimizedKey = product.getImageUrl();
 
-        String newKey = s3ImageService.upload(
+        ImageUploadResult uploadResult = s3ImageService.upload(
                 file,
                 "products/" + productId
         );
 
-        product.changeImage(newKey);
+        /*
+         * Store the future WebP key, not the temporary original key.
+         */
+        product.changeImage(uploadResult.optimizedKey());
 
         dropListLocalReadCache.invalidate();
 
-        synchronizeImageReplacement(oldKey, newKey);
+        synchronizeImageReplacement(
+                oldOptimizedKey,
+                uploadResult.sourceKey(),
+                uploadResult.optimizedKey()
+        );
 
-        /*
-         * This method handles one product, so return one ProductResponse.
-         */
         return toResponse(product);
     }
 
@@ -247,8 +249,9 @@ public class ProductService {
     }
 
     private void synchronizeImageReplacement(
-            String oldKey,
-            String newKey
+            String oldOptimizedKey,
+            String newSourceKey,
+            String newOptimizedKey
     ) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             return;
@@ -259,13 +262,22 @@ public class ProductService {
 
                     @Override
                     public void afterCommit() {
-                        s3ImageService.deleteQuietly(oldKey);
+                        /*
+                         * The DB now references the new optimized image,
+                         * so the previous optimized image can be removed.
+                         */
+                        s3ImageService.deleteQuietly(oldOptimizedKey);
                     }
 
                     @Override
                     public void afterCompletion(int status) {
                         if (status != STATUS_COMMITTED) {
-                            s3ImageService.deleteQuietly(newKey);
+                            /*
+                             * The DB transaction failed. Clean up both
+                             * possible objects belonging to the failed upload.
+                             */
+                            s3ImageService.deleteQuietly(newSourceKey);
+                            s3ImageService.deleteQuietly(newOptimizedKey);
                         }
                     }
                 }
