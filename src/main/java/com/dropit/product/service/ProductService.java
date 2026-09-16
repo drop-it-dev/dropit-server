@@ -1,9 +1,11 @@
 package com.dropit.product.service;
 
-import com.dropit.drop.repository.DropRepository;
+
 import com.dropit.drop.cache.DropListLocalReadCache;
+import com.dropit.drop.repository.DropRepository;
 import com.dropit.global.config.RedisCacheConfig;
 import com.dropit.global.exception.ServiceException;
+import com.dropit.global.storage.ImageUploadResult;
 import com.dropit.global.storage.S3ImageService;
 import com.dropit.product.dto.request.ProductCreateRequest;
 import com.dropit.product.dto.request.ProductUpdateRequest;
@@ -23,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
-import com.dropit.global.storage.ImageUploadResult;
 
 @Service
 @RequiredArgsConstructor
