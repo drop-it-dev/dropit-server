@@ -4,6 +4,7 @@ import com.dropit.drop.entity.Drop;
 import com.dropit.drop.repository.DropRepository;
 import com.dropit.notification.service.WishlistNotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
+@ConditionalOnProperty(name = "app.worker.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class WishlistNotificationScheduler {
 

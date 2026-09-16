@@ -15,8 +15,10 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(
-        prefix = "app.notification.email.sqs",
-        name = "publisher-enabled",
+        name = {
+                "app.worker.enabled",
+                "app.notification.email.sqs.publisher-enabled"
+        },
         havingValue = "true"
 )
 public class PurchaseEmailOutboxRelayScheduler {

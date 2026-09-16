@@ -30,6 +30,7 @@ import static com.epages.restdocs.apispec.ResourceSnippetParameters.builder;
 import static org.springframework.restdocs.payload.JsonFieldType.ARRAY;
 import static org.springframework.restdocs.payload.JsonFieldType.NUMBER;
 import static org.springframework.restdocs.payload.JsonFieldType.STRING;
+import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.mockito.ArgumentMatchers.any;
@@ -82,6 +83,26 @@ class OrderDocumentationTest extends DocumentationTestSupport {
                                 fieldWithPath("items[].quantity").type(NUMBER).description("주문 수량")
                         ).responseSchema(new Schema("OrderAdmissionResponse")).responseFields(
                                 fieldWithPath("requestId").type(STRING).description("주문 요청 ID")
+                        ).responseHeaders(headerWithName("Location").description("주문 요청 상태 조회 URI")).build())));
+    }
+
+    @Test
+    void getOrderRequest() throws Exception {
+        UUID requestId = UUID.randomUUID();
+        when(queryService.get(1L, requestId)).thenReturn(
+                new com.dropit.order.dto.response.OrderRequestStatusResponse(
+                        requestId, OrderRequestStatus.PENDING, null, null, null));
+        mockMvc.perform(authenticated(get("/order-requests/{requestId}", requestId)))
+                .andExpect(status().isOk())
+                .andDo(document("order-requests-get", resource(builder()
+                        .tag("Orders").summary("주문 요청 상태 조회").requestHeaders(authorizationHeader())
+                        .pathParameters(parameterWithName("requestId").description("주문 요청 ID"))
+                        .responseSchema(new Schema("OrderRequestStatusResponse")).responseFields(
+                                fieldWithPath("requestId").type(STRING).description("주문 요청 ID"),
+                                fieldWithPath("status").type(STRING).description("주문 요청 처리 상태"),
+                                fieldWithPath("orderId").type(NUMBER).optional().description("생성된 주문 ID"),
+                                fieldWithPath("orderStatus").type(STRING).optional().description("생성된 주문 상태"),
+                                fieldWithPath("failureCode").type(STRING).optional().description("처리 실패 코드")
                         ).build())));
     }
 
