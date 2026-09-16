@@ -28,7 +28,7 @@ class AwsSesPurchaseEmailSenderTest {
     void SES로_구매_완료_이메일을_발송한다() {
         AwsSesPurchaseEmailSender sender = new AwsSesPurchaseEmailSender(
                 sesClient,
-                new EmailSesProperties("no-reply@dropit.example"),
+                new EmailSesProperties("no-reply@dropit.example", 20_000, 5_000),
                 template
         );
         when(sesClient.sendEmail(any(SendEmailRequest.class)))
@@ -52,7 +52,7 @@ class AwsSesPurchaseEmailSenderTest {
     void 발신_주소가_없으면_SES를_호출하지_않는다() {
         AwsSesPurchaseEmailSender sender = new AwsSesPurchaseEmailSender(
                 sesClient,
-                new EmailSesProperties(""),
+                new EmailSesProperties("", 20_000, 5_000),
                 template
         );
 

@@ -48,7 +48,7 @@ local,localstack
 postman/dropit-purchase-email-local.postman_collection.json
 ```
 
-컬렉션의 **Run collection**을 눌러 1번부터 10번까지 순서대로 실행합니다. 컬렉션이 판매자, 상품, Drop, 구매자를 자동으로 만든 뒤 실제 구매 요청을 보냅니다.
+컬렉션의 **Run collection**을 누르고 Runner의 요청 간 지연(Delay)을 **300ms**로 설정한 뒤 1번부터 10번까지 순서대로 실행합니다. 이 지연은 9번과 10번의 폴링 요청이 서버를 과도하게 호출하지 않도록 합니다. 컬렉션이 판매자, 상품, Drop, 구매자를 자동으로 만든 뒤 실제 구매 요청을 보냅니다.
 
 마지막 10번 요청의 **Visualize** 탭에서 다음 시간을 확인할 수 있습니다.
 

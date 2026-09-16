@@ -217,7 +217,7 @@
           "} else if (body.status === 'FAILED') {",
           "  throw new Error(`주문 처리 실패: ${body.failureCode}`);",
           "} else if (count < 40) {",
-          "  setTimeout(() => pm.execution.setNextRequest('9. 주문 완료 상태 확인'), 300);",
+          "  pm.execution.setNextRequest('9. 주문 완료 상태 확인');",
           "} else {",
           "  throw new Error('10초 안에 주문 처리가 끝나지 않았습니다.');",
           "}"
@@ -245,7 +245,7 @@
           "  const count = Number(pm.collectionVariables.get('emailPollCount') || 0) + 1;",
           "  pm.collectionVariables.set('emailPollCount', count.toString());",
           "  if (!email && count < 40) {",
-          "    setTimeout(() => pm.execution.setNextRequest('10. 자동 발송된 이메일 확인'), 300);",
+          "    pm.execution.setNextRequest('10. 자동 발송된 이메일 확인');",
           "  } else if (!email) {",
           "    throw new Error('10초 안에 구매 완료 이메일이 도착하지 않았습니다.');",
           "  } else {",

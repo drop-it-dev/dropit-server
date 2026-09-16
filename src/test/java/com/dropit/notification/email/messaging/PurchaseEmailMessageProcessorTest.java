@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -98,6 +99,55 @@ class PurchaseEmailMessageProcessorTest {
                 claimToken,
                 "SES 연결 실패"
         );
+    }
+
+    @Test
+    void 발송후_SENT_저장에_실패하면_같은_메시지_ID로_재시도한다() {
+        PurchaseCompletedMessage message = message();
+        UUID claimToken = UUID.randomUUID();
+        when(deliveryService.claim(eq(message), any(), any()))
+                .thenReturn(EmailDeliveryClaim.claimed(claimToken));
+        when(emailSender.send(message)).thenReturn("ses-message-id");
+        org.mockito.Mockito.doThrow(new IllegalStateException("DB 연결 실패"))
+                .doNothing()
+                .when(deliveryService)
+                .markSent(eq(message.eventId()), eq(claimToken), eq("ses-message-id"), any());
+
+        processor.process(message);
+
+        verify(emailSender).send(message);
+        verify(deliveryService, times(2)).markSent(
+                eq(message.eventId()),
+                eq(claimToken),
+                eq("ses-message-id"),
+                any()
+        );
+        verify(deliveryService, never()).releaseForRetry(any(), any(), any());
+    }
+
+    @Test
+    void SENT_저장이_계속_실패해도_발송_Claim을_해제하지_않는다() {
+        PurchaseCompletedMessage message = message();
+        UUID claimToken = UUID.randomUUID();
+        when(deliveryService.claim(eq(message), any(), any()))
+                .thenReturn(EmailDeliveryClaim.claimed(claimToken));
+        when(emailSender.send(message)).thenReturn("ses-message-id");
+        org.mockito.Mockito.doThrow(new IllegalStateException("DB 연결 실패"))
+                .when(deliveryService)
+                .markSent(eq(message.eventId()), eq(claimToken), eq("ses-message-id"), any());
+
+        assertThatThrownBy(() -> processor.process(message))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("DB 연결 실패");
+
+        verify(emailSender).send(message);
+        verify(deliveryService, times(3)).markSent(
+                eq(message.eventId()),
+                eq(claimToken),
+                eq("ses-message-id"),
+                any()
+        );
+        verify(deliveryService, never()).releaseForRetry(any(), any(), any());
     }
 
     private PurchaseCompletedMessage message() {
