@@ -1,6 +1,7 @@
 package com.dropit.product.service;
 
 import com.dropit.drop.repository.DropRepository;
+import com.dropit.drop.cache.DropListLocalReadCache;
 import com.dropit.global.exception.ServiceException;
 import com.dropit.global.storage.S3ImageService;
 import com.dropit.product.dto.request.ProductCreateRequest;
@@ -55,6 +56,9 @@ class ProductServiceTest {
 
     @InjectMocks
     private ProductService productService;
+
+    @Mock
+    private DropListLocalReadCache dropListLocalReadCache;
 
     @Test
     @DisplayName("판매자는 상품을 등록할 수 있다")
