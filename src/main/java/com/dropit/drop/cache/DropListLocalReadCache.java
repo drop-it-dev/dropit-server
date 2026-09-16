@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Duration;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -15,6 +16,7 @@ public class DropListLocalReadCache {
     static final Duration TTL = Duration.ofMillis(200);
 
     private final AtomicReference<Entry> latest = new AtomicReference<>();
+    private final ReentrantLock refreshLock = new ReentrantLock();
     private final DropListCacheMetrics metrics;
     private final LongSupplier nanoTime;
 
@@ -35,7 +37,8 @@ public class DropListLocalReadCache {
             return current.value();
         }
 
-        synchronized (this) {
+        refreshLock.lock();
+        try {
             current = latest.get();
             if (isFresh(current)) {
                 metrics.recordL1Hit();
@@ -46,6 +49,8 @@ public class DropListLocalReadCache {
             latest.set(new Entry(value, nanoTime.getAsLong() + TTL.toNanos()));
             metrics.recordL1Load();
             return value;
+        } finally {
+            refreshLock.unlock();
         }
     }
 

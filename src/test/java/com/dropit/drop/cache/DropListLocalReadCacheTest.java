@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DropListLocalReadCacheTest {
 
@@ -70,5 +71,18 @@ class DropListLocalReadCacheTest {
             }
         }
         assertEquals(1, loads.get());
+    }
+
+    @Test
+    void failedRefreshReleasesLockAndCanRetry() {
+        DropListLocalReadCache cache = new DropListLocalReadCache(
+                new DropListCacheMetrics(new SimpleMeterRegistry())
+        );
+        DropListCacheValue value = new DropListCacheValue(List.of(), 1);
+
+        assertThrows(IllegalStateException.class, () -> cache.get(() -> {
+            throw new IllegalStateException("metadata load failed");
+        }));
+        assertEquals(value, cache.get(() -> value));
     }
 }
