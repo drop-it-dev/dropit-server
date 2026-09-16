@@ -27,7 +27,12 @@ class PurchaseEmailMessagePublisherTest {
                 3000,
                 50,
                 30000,
-                5000
+                5000,
+                false,
+                2,
+                2,
+                10,
+                60
         );
         PurchaseEmailMessagePublisher publisher =
                 new PurchaseEmailMessagePublisher(sqsClient, properties);
@@ -55,7 +60,12 @@ class PurchaseEmailMessagePublisherTest {
                 3000,
                 50,
                 30000,
-                5000
+                5000,
+                false,
+                2,
+                2,
+                10,
+                60
         );
         PurchaseEmailMessagePublisher publisher =
                 new PurchaseEmailMessagePublisher(sqsClient, properties);

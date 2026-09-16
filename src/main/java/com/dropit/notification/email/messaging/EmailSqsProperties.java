@@ -9,6 +9,11 @@ public record EmailSqsProperties(
         long publisherTimeoutMillis,
         int relayBatchSize,
         long claimTimeoutMillis,
-        long retryDelayMillis
+        long retryDelayMillis,
+        boolean consumerEnabled,
+        int consumerConcurrency,
+        int consumerMaxNumberOfMessages,
+        int consumerWaitTimeSeconds,
+        int consumerVisibilityTimeoutSeconds
 ) {
 }

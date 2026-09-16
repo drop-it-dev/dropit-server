@@ -28,7 +28,12 @@ class PurchaseEmailOutboxRelayServiceTest {
             3000,
             50,
             30000,
-            5000
+            5000,
+            false,
+            2,
+            2,
+            10,
+            60
     );
     private final PurchaseEmailOutboxRelayService relayService =
             new PurchaseEmailOutboxRelayService(

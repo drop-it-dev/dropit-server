@@ -37,6 +37,7 @@ dependencies {
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3'
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-ses'
     implementation 'software.amazon.awssdk:url-connection-client'
 
     implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
