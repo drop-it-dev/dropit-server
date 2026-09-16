@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.LockModeType;
 
 import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.List;
 
 public interface DropRepository extends JpaRepository<Drop, Long>, DropRepositoryCustom {
 
@@ -52,7 +54,6 @@ public interface DropRepository extends JpaRepository<Drop, Long>, DropRepositor
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select d from Drop d where d.id = :dropId")
     Optional<Drop> findByIdForUpdate(@Param("dropId") Long dropId);
-
     @Modifying(flushAutomatically = true)
     @Query("""
             update Drop d
@@ -64,5 +65,10 @@ public interface DropRepository extends JpaRepository<Drop, Long>, DropRepositor
     int decreaseStockIfAvailable(
             @Param("dropId") Long dropId,
             @Param("quantity") int quantity
+    );
+
+    List<Drop> findAllByVisibleTrueAndOpenAtBetween(
+            LocalDateTime from,
+            LocalDateTime to
     );
 }
